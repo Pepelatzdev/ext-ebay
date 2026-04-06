@@ -1,0 +1,66 @@
+/* eBay Copy Assistant — Floating Button & Tooltip */
+
+#ebay-copy-assistant-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+  font-size: 20px;
+  line-height: 1;
+  color: #fff;
+  padding: 0;
+}
+
+#ebay-copy-assistant-btn:hover {
+  transform: scale(1.12);
+  background: rgba(50, 50, 50, 0.95);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+#ebay-copy-assistant-btn:active {
+  transform: scale(0.95);
+}
+
+#ebay-copy-assistant-btn.ebay-copy--success {
+  background: rgba(34, 139, 34, 0.9);
+}
+
+/* Copied notification tooltip */
+#ebay-copy-assistant-tooltip {
+  position: fixed;
+  bottom: 76px;
+  right: 16px;
+  background: rgba(34, 139, 34, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
+  z-index: 2147483647;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+#ebay-copy-assistant-tooltip.ebay-copy--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
