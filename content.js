@@ -177,33 +177,32 @@
   function extractSellerReviews() {
     const reviews = [];
 
-    // Strategy 1: feedback cards container (data-testid based)
-    const feedbackContainer = document.querySelector('[data-testid="feedback-cards"]');
-    if (feedbackContainer) {
-      feedbackContainer.querySelectorAll('[data-testid^="fdbk-detail-list"]').forEach((card) => {
-        if (reviews.length >= 10) return;
-        // Get the review comment text — skip metadata (dates, usernames)
-        const allText = card.textContent?.trim() || '';
-        if (allText.length > 20) reviews.push(allText);
-      });
-    }
+    // eBay renders feedback cards twice (visible + hidden duplicate).
+    // Use .fdbk-container for individual cards and filter by visibility.
+    const allCards = Array.from(document.querySelectorAll('.fdbk-container'))
+      .filter((card) => card.offsetWidth > 0 && card.offsetHeight > 0);
 
-    // Strategy 2: Classic feedback card structure
-    if (reviews.length === 0) {
-      document.querySelectorAll('.fdbk-detail-list .card, .fdbk-detail-list__card').forEach((card) => {
-        if (reviews.length >= 10) return;
-        const text = card.textContent?.trim() || '';
-        if (text.length > 20) reviews.push(text);
-      });
-    }
+    for (const card of allCards) {
+      if (reviews.length >= 10) break;
 
-    // Strategy 3: Any visible feedback section
-    if (reviews.length === 0) {
-      document.querySelectorAll('[class*="fdbk"] [class*="card"]').forEach((card) => {
-        if (reviews.length >= 10) return;
-        const text = card.textContent?.trim() || '';
-        if (text.length > 20) reviews.push(text);
-      });
+      const user = card.querySelector('.fdbk-container__details__info__username')
+        ?.textContent?.replace(/- Feedback left by buyer\./i, '')?.trim() || '';
+      const time = card.querySelector('.fdbk-container__details__info__divide__time')
+        ?.textContent?.trim() || '';
+      const comment = card.querySelector('.fdbk-container__details__comment')
+        ?.textContent?.trim() || '';
+      const item = card.querySelector('.fdbk-container__details__item-link')
+        ?.textContent?.trim() || '';
+
+      if (!comment) continue;
+
+      let review = '';
+      if (user) review += `[${user}]`;
+      if (time) review += ` (${time})`;
+      review += `: ${comment}`;
+      if (item) review += ` — ${item}`;
+
+      reviews.push(review.trim());
     }
 
     return reviews;
