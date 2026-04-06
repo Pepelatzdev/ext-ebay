@@ -74,10 +74,23 @@
   }
 
   function extractCondition() {
-    const el =
-      document.querySelector('.x-item-condition-text .ux-textspans') ||
-      document.querySelector('[data-testid*="condition"] .ux-textspans');
-    return el?.textContent?.trim() || '';
+    // Condition has multiple spans: teaser (truncated), "Read more" link, full text (hidden), "See all..."
+    // We want only the longest meaningful span (the full description)
+    const container =
+      document.querySelector('.x-item-condition-text') ||
+      document.querySelector('[data-testid*="condition"]');
+    if (!container) return '';
+
+    const spans = container.querySelectorAll('.ux-textspans');
+    let best = '';
+    spans.forEach((span) => {
+      const text = span.textContent?.trim() || '';
+      // Skip UI strings
+      if (/^(Read more|See all)/i.test(text)) return;
+      // Pick the longest text (full description is longer than the teaser)
+      if (text.length > best.length) best = text;
+    });
+    return best;
   }
 
   function extractItemSpecifics() {
@@ -87,13 +100,18 @@
     );
     rows.forEach((row) => {
       const labelEl = row.querySelector('.ux-labels-values__labels .ux-textspans');
-      const valueEls = row.querySelectorAll('.ux-labels-values__values .ux-textspans');
       const label = labelEl?.textContent?.trim();
+      if (!label) return;
+
+      // Skip "Condition" row — extracted separately by extractCondition()
+      if (label === 'Condition') return;
+
+      const valueEls = row.querySelectorAll('.ux-labels-values__values .ux-textspans');
       const values = Array.from(valueEls)
         .map((el) => el.textContent.trim())
-        .filter(Boolean);
+        .filter((t) => t && !/^(Read more|See all)/i.test(t));
       const value = values.join(', ');
-      if (label && value) {
+      if (value) {
         specs.push({ label, value });
       }
     });
