@@ -187,21 +187,22 @@
         // Cross-origin — expected for ebaydesc.com
       }
 
-      // Fetch iframe src content
+      // Fetch via background service worker (bypasses CORS)
       if (iframe.src) {
         try {
-          const resp = await fetch(iframe.src, { credentials: 'omit' });
-          if (resp.ok) {
-            const html = await resp.text();
+          const response = await chrome.runtime.sendMessage({
+            type: 'FETCH_DESCRIPTION',
+            url: iframe.src,
+          });
+          if (response?.success && response.html) {
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            // Remove script/style elements for cleaner text
+            const doc = parser.parseFromString(response.html, 'text/html');
             doc.querySelectorAll('script, style, link').forEach((el) => el.remove());
             const text = doc.body?.textContent?.trim() || '';
             if (text) return text;
           }
         } catch (_) {
-          // Fetch blocked — will try other strategies
+          // Message passing failed — try other strategies
         }
       }
     }
