@@ -74,22 +74,38 @@
   }
 
   function extractCondition() {
-    // Condition has multiple spans: teaser (truncated), "Read more" link, full text (hidden), "See all..."
-    // We want only the longest meaningful span (the full description)
-    const container =
-      document.querySelector('.x-item-condition-text') ||
-      document.querySelector('[data-testid*="condition"]');
-    if (!container) return '';
-
-    const spans = container.querySelectorAll('.ux-textspans');
     let best = '';
-    spans.forEach((span) => {
-      const text = span.textContent?.trim() || '';
-      // Skip UI strings
-      if (/^(Read more|See all)/i.test(text)) return;
-      // Pick the longest text (full description is longer than the teaser)
-      if (text.length > best.length) best = text;
-    });
+
+    // Strategy 1: Item Specifics "Condition" row (has full expandable text)
+    const specRows = document.querySelectorAll('.ux-layout-section-evo__item--table-view .ux-labels-values');
+    for (const row of specRows) {
+      const label = row.querySelector('.ux-labels-values__labels .ux-textspans')?.textContent?.trim();
+      if (label === 'Condition') {
+        const spans = row.querySelectorAll('.ux-labels-values__values .ux-textspans');
+        spans.forEach((span) => {
+          const text = span.textContent?.trim() || '';
+          if (/^(Read more|See all)/i.test(text)) return;
+          if (text.length > best.length) best = text;
+        });
+        break;
+      }
+    }
+
+    // Strategy 2: Standalone condition element (top of page)
+    if (!best) {
+      const container =
+        document.querySelector('.x-item-condition-text') ||
+        document.querySelector('[data-testid*="condition"]');
+      if (container) {
+        const spans = container.querySelectorAll('.ux-textspans');
+        spans.forEach((span) => {
+          const text = span.textContent?.trim() || '';
+          if (/^(Read more|See all)/i.test(text)) return;
+          if (text.length > best.length) best = text;
+        });
+      }
+    }
+
     return best;
   }
 
@@ -161,28 +177,32 @@
   function extractSellerReviews() {
     const reviews = [];
 
-    // Try feedback detail cards
-    const feedbackCards = document.querySelectorAll('.fdbk-detail-list .card');
-    feedbackCards.forEach((card) => {
-      const text = card.querySelector('.card__comment .ux-textspans')?.textContent?.trim();
-      if (text && reviews.length < 15) reviews.push(text);
-    });
-
-    // Try alternate feedback card structures
-    if (reviews.length === 0) {
-      document.querySelectorAll('.fdbk-detail-list__card').forEach((card) => {
-        const text = card.querySelector('.ux-textspans')?.textContent?.trim();
-        if (text && text.length > 15 && reviews.length < 15) reviews.push(text);
+    // Strategy 1: feedback cards container (data-testid based)
+    const feedbackContainer = document.querySelector('[data-testid="feedback-cards"]');
+    if (feedbackContainer) {
+      feedbackContainer.querySelectorAll('[data-testid^="fdbk-detail-list"]').forEach((card) => {
+        if (reviews.length >= 10) return;
+        // Get the review comment text — skip metadata (dates, usernames)
+        const allText = card.textContent?.trim() || '';
+        if (allText.length > 20) reviews.push(allText);
       });
     }
 
-    // Try data-testid based feedback
+    // Strategy 2: Classic feedback card structure
     if (reviews.length === 0) {
-      document.querySelectorAll('[data-testid*="feedback"] .ux-textspans').forEach((el) => {
-        const text = el.textContent?.trim();
-        if (text && text.length > 20 && reviews.length < 15) {
-          reviews.push(text);
-        }
+      document.querySelectorAll('.fdbk-detail-list .card, .fdbk-detail-list__card').forEach((card) => {
+        if (reviews.length >= 10) return;
+        const text = card.textContent?.trim() || '';
+        if (text.length > 20) reviews.push(text);
+      });
+    }
+
+    // Strategy 3: Any visible feedback section
+    if (reviews.length === 0) {
+      document.querySelectorAll('[class*="fdbk"] [class*="card"]').forEach((card) => {
+        if (reviews.length >= 10) return;
+        const text = card.textContent?.trim() || '';
+        if (text.length > 20) reviews.push(text);
       });
     }
 
@@ -256,6 +276,8 @@
     output += `**URL:** ${window.location.href}\n`;
     if (data.price) output += `**Price:** ${data.price}\n`;
     if (data.condition) output += `**Condition:** ${data.condition}\n`;
+    if (data.shipping) output += `**Shipping:** ${data.shipping}\n`;
+    if (data.returns) output += `**Returns:** ${data.returns}\n`;
 
     if (data.specs.length > 0) {
       output += '\n**Item Specifics:**\n';
@@ -263,9 +285,6 @@
         output += `- ${s.label}: ${s.value}\n`;
       });
     }
-
-    if (data.shipping) output += `\n**Shipping:** ${data.shipping}\n`;
-    if (data.returns) output += `**Returns:** ${data.returns}\n`;
 
     if (data.seller.name) {
       output += `\n**Seller:** ${data.seller.name}`;
