@@ -275,16 +275,9 @@
     if (data.title) output += `**Product:** ${data.title}\n`;
     output += `**URL:** ${window.location.href}\n`;
     if (data.price) output += `**Price:** ${data.price}\n`;
-    if (data.condition) output += `**Condition:** ${data.condition}\n`;
     if (data.shipping) output += `**Shipping:** ${data.shipping}\n`;
+    if (data.condition) output += `**Condition:** ${data.condition}\n`;
     if (data.returns) output += `**Returns:** ${data.returns}\n`;
-
-    if (data.specs.length > 0) {
-      output += '\n**Item Specifics:**\n';
-      data.specs.forEach((s) => {
-        output += `- ${s.label}: ${s.value}\n`;
-      });
-    }
 
     if (data.seller.name) {
       output += `\n**Seller:** ${data.seller.name}`;
@@ -296,6 +289,13 @@
       output += '\n**Seller Reviews:**\n';
       data.reviews.forEach((r) => {
         output += `- "${r}"\n`;
+      });
+    }
+
+    if (data.specs.length > 0) {
+      output += '\n**Item Specifics:**\n';
+      data.specs.forEach((s) => {
+        output += `- ${s.label}: ${s.value}\n`;
       });
     }
 
