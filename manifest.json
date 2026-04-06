@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "One-click copy of eBay product details as a prompt-ready text for chatbot consultation.",
   "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "*://*.ebaydesc.com/*",
+    "*://*.ebay.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },

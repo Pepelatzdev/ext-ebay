@@ -172,38 +172,54 @@
   }
 
   async function extractDescription() {
-    // Try direct description container first
-    const descDiv =
-      document.querySelector('.x-item-description [data-testid="x-item-description-child"]') ||
-      document.querySelector('#desc_div') ||
-      document.querySelector('.x-item-description');
-    if (descDiv && descDiv.textContent?.trim()) {
-      return descDiv.textContent.trim();
-    }
-
-    // Try iframe content
+    // Strategy 1: Try iframe first (most common on eBay — description is in #desc_ifr)
     const iframe = document.querySelector(
-      'iframe#desc_ifr, iframe[src*="vi/description"], iframe[src*="ebaydesc"]'
+      'iframe#desc_ifr, iframe[src*="ebaydesc"], iframe[src*="vi/description"]'
     );
     if (iframe) {
+      // Try same-origin access first
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iframeDoc?.body) {
-          return iframeDoc.body.textContent?.trim() || '';
+        if (iframeDoc?.body?.textContent?.trim()) {
+          return iframeDoc.body.textContent.trim();
         }
-      } catch (e) {
-        // Cross-origin — try fetching iframe src
-        if (iframe.src) {
-          try {
-            const resp = await fetch(iframe.src);
+      } catch (_) {
+        // Cross-origin — expected for ebaydesc.com
+      }
+
+      // Fetch iframe src content
+      if (iframe.src) {
+        try {
+          const resp = await fetch(iframe.src, { credentials: 'omit' });
+          if (resp.ok) {
             const html = await resp.text();
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            return doc.body?.textContent?.trim() || '';
-          } catch (fetchErr) {
-            return '[Description could not be extracted]';
+            // Remove script/style elements for cleaner text
+            doc.querySelectorAll('script, style, link').forEach((el) => el.remove());
+            const text = doc.body?.textContent?.trim() || '';
+            if (text) return text;
           }
+        } catch (_) {
+          // Fetch blocked — will try other strategies
         }
+      }
+    }
+
+    // Strategy 2: Direct description container (some listings render inline)
+    const descSelectors = [
+      '[data-testid="x-item-description-child"]',
+      '.d-item-description',
+      '.x-item-description',
+      '#desc_div',
+      '[data-testid="d-item-description"]',
+    ];
+    for (const sel of descSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        // Skip if only contains the section heading (~30 chars)
+        const text = el.textContent?.trim() || '';
+        if (text.length > 60) return text;
       }
     }
 
