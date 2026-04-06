@@ -14,12 +14,25 @@
   btn.id = 'ebay-copy-assistant-btn';
   btn.title = 'Copy product info for chatbot';
   btn.textContent = '📋';
-  document.body.appendChild(btn);
 
   const tooltip = document.createElement('div');
   tooltip.id = 'ebay-copy-assistant-tooltip';
   tooltip.textContent = '✓ Copied!';
-  document.body.appendChild(tooltip);
+
+  // Insert button next to the watchlist heart in the image carousel
+  const imgBtnContainer = document.querySelector(
+    '.ux-image-carousel-buttons.ux-image-carousel-buttons__top-right'
+  );
+  if (imgBtnContainer) {
+    imgBtnContainer.prepend(btn);
+    imgBtnContainer.appendChild(tooltip);
+  } else {
+    // Fallback: floating button
+    btn.classList.add('ebay-copy--floating');
+    document.body.appendChild(btn);
+    document.body.appendChild(tooltip);
+    tooltip.classList.add('ebay-copy--floating-tooltip');
+  }
 
   let feedbackTimer = null;
 
