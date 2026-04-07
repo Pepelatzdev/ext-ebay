@@ -1,3 +1,7 @@
+const svgCopy = '<svg fill="#000000" viewBox="0 0 36 36" version="1.1" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><path d="M29.5,7h-19A1.5,1.5,0,0,0,9,8.5v24A1.5,1.5,0,0,0,10.5,34h19A1.5,1.5,0,0,0,31,32.5V8.5A1.5,1.5,0,0,0,29.5,7ZM29,32H11V9H29Z"></path><path d="M26,3.5A1.5,1.5,0,0,0,24.5,2H5.5A1.5,1.5,0,0,0,4,3.5v24A1.5,1.5,0,0,0,5.5,29H6V4H26Z"></path></svg>';
+const svgSuccess = '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"></path></svg>';
+const svgError = '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"></path></svg>';
+
 (function () {
   'use strict';
 
@@ -7,17 +11,14 @@
   const DEFAULT_PREAMBLE = 'Ось інформація про товар з eBay. Допоможи мені оцінити цю пропозицію:';
 
   // ============================================================
-  // UI: Create Floating Button & Tooltip
+  // UI: Create Button
   // ============================================================
 
   const btn = document.createElement('button');
   btn.id = 'ebay-copy-assistant-btn';
-  btn.title = 'Copy product info for chatbot';
-  btn.textContent = '📋';
-
-  const tooltip = document.createElement('div');
-  tooltip.id = 'ebay-copy-assistant-tooltip';
-  tooltip.textContent = '✓ Copied!';
+  btn.title = 'Copy product info';
+  btn.innerHTML = svgCopy;
+  btn.classList.add('icon-btn');
 
   // Insert button next to the watchlist heart in the image carousel
   const imgBtnContainer = document.querySelector(
@@ -25,42 +26,34 @@
   );
   if (imgBtnContainer) {
     imgBtnContainer.prepend(btn);
-    imgBtnContainer.appendChild(tooltip);
   } else {
     // Fallback: floating button
     btn.classList.add('ebay-copy--floating');
     document.body.appendChild(btn);
-    document.body.appendChild(tooltip);
-    tooltip.classList.add('ebay-copy--floating-tooltip');
   }
 
   let feedbackTimer = null;
 
   function showSuccess() {
     if (feedbackTimer) clearTimeout(feedbackTimer);
-    btn.textContent = '✓';
+    btn.innerHTML = svgSuccess;
     btn.classList.add('ebay-copy--success');
-    tooltip.textContent = '✓ Copied!';
-    tooltip.classList.add('ebay-copy--visible');
 
     feedbackTimer = setTimeout(() => {
-      btn.textContent = '📋';
+      btn.innerHTML = svgCopy;
       btn.classList.remove('ebay-copy--success');
-      tooltip.classList.remove('ebay-copy--visible');
       feedbackTimer = null;
     }, 2000);
   }
 
-  function showError(msg) {
+  function showError() {
     if (feedbackTimer) clearTimeout(feedbackTimer);
-    btn.textContent = '✗';
-    tooltip.textContent = msg || '✗ Copy failed';
-    tooltip.classList.add('ebay-copy--visible');
+    btn.innerHTML = svgError;
+    btn.classList.add('ebay-copy--error');
 
     feedbackTimer = setTimeout(() => {
-      btn.textContent = '📋';
-      tooltip.textContent = '✓ Copied!';
-      tooltip.classList.remove('ebay-copy--visible');
+      btn.innerHTML = svgCopy;
+      btn.classList.remove('ebay-copy--error');
       feedbackTimer = null;
     }, 2500);
   }
@@ -361,7 +354,7 @@
       } catch (_) {
         // ignore fallback failure
       }
-      showError('✗ Copy failed');
+      showError();
     } finally {
       btn.style.pointerEvents = 'auto';
     }
