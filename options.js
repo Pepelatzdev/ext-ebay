@@ -8,7 +8,7 @@ const statusEl = document.getElementById('status');
 let statusTimer = null;
 
 // Load saved preamble on page load
-chrome.storage.sync.get({ preamble: DEFAULT_PREAMBLE }, (result) => {
+chrome.storage.sync.get({ preamble: DEFAULT_PREAMBLE }).then((result) => {
   preambleTextarea.value = result.preamble;
 });
 
@@ -19,7 +19,7 @@ saveBtn.addEventListener('click', () => {
     showStatus('Preamble cannot be empty.', 'error');
     return;
   }
-  chrome.storage.sync.set({ preamble: value }, () => {
+  chrome.storage.sync.set({ preamble: value }).then(() => {
     showStatus('✓ Saved!', 'success');
   });
 });
@@ -27,7 +27,7 @@ saveBtn.addEventListener('click', () => {
 // Reset to default button
 resetBtn.addEventListener('click', () => {
   preambleTextarea.value = DEFAULT_PREAMBLE;
-  chrome.storage.sync.set({ preamble: DEFAULT_PREAMBLE }, () => {
+  chrome.storage.sync.set({ preamble: DEFAULT_PREAMBLE }).then(() => {
     showStatus('✓ Reset to default!', 'success');
   });
 });

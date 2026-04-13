@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Handle fetch requests from content scripts (bypasses CORS)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'FETCH_DESCRIPTION' && message.url) {
     fetch(message.url, { credentials: 'omit' })
       .then((resp) => {
