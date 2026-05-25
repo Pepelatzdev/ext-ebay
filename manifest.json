@@ -1,46 +1,52 @@
 {
-  "manifest_version": 3,
-  "name": "eBay Copy Assistant",
-  "version": "1.0.0",
-  "description": "One-click copy of eBay product details as a prompt-ready text for chatbot consultation.",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": [
-    "*://*.ebaydesc.com/*",
-    "*://*.ebay.com/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "options_page": "options.html",
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.ebay.com/itm/*",
-        "*://*.ebay.co.uk/itm/*",
-        "*://*.ebay.de/itm/*",
-        "*://*.ebay.fr/itm/*",
-        "*://*.ebay.it/itm/*",
-        "*://*.ebay.es/itm/*",
-        "*://*.ebay.com.au/itm/*",
-        "*://*.ebay.ca/itm/*",
-        "*://*.ebay.at/itm/*",
-        "*://*.ebay.pl/itm/*"
-      ],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
-    }
-  ],
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "action": {
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  }
+	"manifest_version": 3,
+	"name": "eBay Copy Assistant",
+	"version": "1.0.0",
+	"description": "One-click copy of eBay product details as a prompt-ready text for chatbot consultation.",
+	"permissions": ["storage", "activeTab"],
+	"host_permissions": [
+		"*://*.ebaydesc.com/*",
+		"*://*.ebay.com/*",
+		"https://gemini.google.com/*"
+	],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"options_page": "options.html",
+	"content_scripts": [
+		{
+			"matches": [
+				"*://*.ebay.com/itm/*",
+				"*://*.ebay.co.uk/itm/*",
+				"*://*.ebay.de/itm/*",
+				"*://*.ebay.fr/itm/*",
+				"*://*.ebay.it/itm/*",
+				"*://*.ebay.es/itm/*",
+				"*://*.ebay.com.au/itm/*",
+				"*://*.ebay.ca/itm/*",
+				"*://*.ebay.at/itm/*",
+				"*://*.ebay.pl/itm/*"
+			],
+			"js": ["content.js"],
+			"css": ["content.css"],
+			"run_at": "document_idle"
+		},
+		{
+			"matches": ["https://gemini.google.com/*"],
+			"js": ["gemini-content.js"],
+			"run_at": "document_idle"
+		}
+	],
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
+	},
+	"action": {
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
+	}
 }

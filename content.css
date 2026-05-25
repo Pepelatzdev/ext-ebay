@@ -2,58 +2,62 @@
 
 /* Fallback: floating button (if watch container not found) */
 .ebay-copy--floating {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  z-index: 2147483647;
-  background: rgba(30, 30, 30, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	border: none;
+	cursor: pointer;
+	z-index: 2147483647;
+	background: rgba(30, 30, 30, 0.85);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+	color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .ebay-copy--floating:hover {
-  background: rgba(50, 50, 50, 0.95);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+	background: rgba(50, 50, 50, 0.95);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Floating button: state feedback */
-.ebay-copy--floating.ebay-copy--success { background: rgba(34, 139, 34, 0.92) !important; }
-.ebay-copy--floating.ebay-copy--error   { background: rgba(200, 40, 40, 0.92) !important; }
+.ebay-copy--floating.ebay-copy--success {
+	background: rgba(34, 139, 34, 0.92) !important;
+}
+.ebay-copy--floating.ebay-copy--error {
+	background: rgba(200, 40, 40, 0.92) !important;
+}
 
 /* Floating button: SVG icon size */
 .ebay-copy--floating svg {
-  width: 20px;
-  height: 20px;
+	width: 20px;
+	height: 20px;
 }
 
 /* Inline button: SVG icon size and spacing */
 .ebay-copy-btn svg {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-  vertical-align: middle;
-  flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	margin-right: 8px;
+	vertical-align: middle;
+	flex-shrink: 0;
 }
 
 /* Inline button: state feedback */
 .ebay-copy-btn.ebay-copy--success {
-  background-color: #e5f6e5 !important;
-  border-color: rgba(34, 139, 34, 0.92) !important;
-  color: rgba(34, 139, 34, 0.92) !important;
+	background-color: #e5f6e5 !important;
+	border-color: rgba(34, 139, 34, 0.92) !important;
+	color: rgba(34, 139, 34, 0.92) !important;
 }
 
 .ebay-copy-btn.ebay-copy--error {
-  background-color: #fdeaea !important;
-  border-color: rgba(200, 40, 40, 0.92) !important;
-  color: rgba(200, 40, 40, 0.92) !important;
+	background-color: #fdeaea !important;
+	border-color: rgba(200, 40, 40, 0.92) !important;
+	color: rgba(200, 40, 40, 0.92) !important;
 }
