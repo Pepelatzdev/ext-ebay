@@ -52,7 +52,9 @@
 
 					// Monitor the URL. Once it changes to a chat URL, save the link
 					const initialUrl = window.location.href;
+					let urlCheckAttempts = 0;
 					const urlCheckInterval = setInterval(() => {
+						urlCheckAttempts++;
 						const currentUrl = window.location.href;
 						const isNewChat =
 							currentUrl !== initialUrl ||
@@ -100,6 +102,11 @@
 									chrome.storage.local.remove(["activePromptItemId"]);
 								});
 							});
+						} else if (urlCheckAttempts >= 300) {
+							clearInterval(urlCheckInterval);
+							console.warn(
+								"eBay Copy Assistant: URL monitor timed out after 5 minutes without detecting a chat URL change.",
+							);
 						}
 					}, 1000);
 				} else if (attempts >= maxAttempts) {

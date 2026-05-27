@@ -1,0 +1,80 @@
+/**
+ * Shared configuration for eBay Copy Assistant.
+ * Loaded before all other scripts (content scripts, background, options).
+ *
+ * Uses `var` intentionally — content scripts listed in manifest.json share
+ * the same isolated-world scope, and `var` hoists to that global scope,
+ * making ECA accessible from extractors.js, ui.js, and content.js.
+ */
+
+/* eslint-disable no-var */
+/* biome-ignore-all lint/correctness/noUnusedVariables: global config object */
+var ECA = {
+	// ── Defaults ──────────────────────────────────────────────
+	DEFAULT_PREAMBLE:
+		"Ось інформація про товар з eBay. Допоможи мені оцінити цю пропозицію:",
+	DEFAULT_GEMINI_URL: "https://gemini.google.com/gem/cb9c9074ac8d",
+
+	// ── CSS class names ───────────────────────────────────────
+	FLOATING_CLASS: "ebay-copy--floating",
+	CONTAINER_ID: "ebay-copy-assistant-container",
+	BTN_ID: "ebay-copy-assistant-btn",
+	RESET_BTN_ID: "ebay-gemini-reset-btn",
+
+	// ── Timing ────────────────────────────────────────────────
+	FEEDBACK_DELAY: { success: 2000, error: 2500 },
+	FEEDBACK_LABEL: { success: "Copied!", error: "Error" },
+
+	// ── Patterns ──────────────────────────────────────────────
+	READ_MORE_RE: /^(Read more|See all)/i,
+	ITEM_ID_RE: /\/itm\/(\d+)/,
+
+	// ── eBay DOM Selectors ────────────────────────────────────
+	// Extracted so that eBay redesigns only require updating this map.
+	SELECTORS: {
+		title: [
+			".x-item-title__mainTitle .ux-textspans",
+			"h1.x-item-title__mainTitle",
+			'h1[itemprop="name"]',
+			".x-item-title h1",
+		],
+		pricePrimary: [
+			"div.x-price-primary > span.ux-textspans",
+			'[itemprop="price"]',
+		],
+		binPrice: ".x-bin-price div.x-price-primary > span.ux-textspans",
+		bidButton: "#bidBtn_btn",
+		viewBids: 'a[href*="viewbids"]',
+		binButton: "#binBtn_btn_1",
+		specRows: ".ux-layout-section-evo__item--table-view .ux-labels-values",
+		specLabel: ".ux-labels-values__labels .ux-textspans",
+		specValues: ".ux-labels-values__values .ux-textspans",
+		specValuesContainer: ".ux-labels-values__values",
+		conditionContainer: [
+			".x-item-condition-text",
+			'[data-testid*="condition"]',
+		],
+		sellerName: [
+			".x-sellercard-atf__info__about-seller .ux-textspans",
+			'[data-testid*="seller"] a.ux-textspans',
+		],
+		sellerFeedback:
+			".x-sellercard-atf__info__about-seller .ux-textspans--SECONDARY",
+		reviewCards: ".fdbk-container",
+		reviewComment: ".fdbk-container__details__comment",
+		reviewUser: ".fdbk-container__details__info__username",
+		reviewTime: ".fdbk-container__details__info__divide__time",
+		reviewItem: ".fdbk-container__details__item-link",
+		descIframe:
+			'iframe#desc_ifr, iframe[src*="ebaydesc"], iframe[src*="vi/description"]',
+		descContainers: [
+			'[data-testid="x-item-description-child"]',
+			".d-item-description",
+			".x-item-description",
+			"#desc_div",
+			'[data-testid="d-item-description"]',
+		],
+		watchContainer: "#vi-atl-lnk-99",
+		watchButton: "#watchBtn_btn_1",
+	},
+};

@@ -24,7 +24,7 @@ jobs:
       - name: Prepare build directory
         run: |
           mkdir -p dist
-          cp manifest.json background.js content.js gemini-content.js options.html options.css options.js content.css dist/
+          cp manifest.json background.js config.js extractors.js ui.js content.js gemini-content.js options.html options.css options.js content.css dist/
           cp -r icons dist/
           mkdir -p build
 

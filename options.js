@@ -1,6 +1,10 @@
-const DEFAULT_PREAMBLE =
-	"Ось інформація про товар з eBay. Допоможи мені оцінити цю пропозицію:";
-const DEFAULT_GEMINI_URL = "https://gemini.google.com/gem/cb9c9074ac8d";
+/**
+ * eBay Copy Assistant — Options Page.
+ *
+ * Depends on ECA global from config.js (loaded via <script> in options.html).
+ */
+
+/* global ECA */
 
 const preambleTextarea = document.getElementById("preamble");
 const geminiUrlInput = document.getElementById("gemini-url");
@@ -12,7 +16,10 @@ let statusTimer = null;
 
 // Load saved options on page load
 chrome.storage.sync
-	.get({ preamble: DEFAULT_PREAMBLE, geminiUrl: DEFAULT_GEMINI_URL })
+	.get({
+		preamble: ECA.DEFAULT_PREAMBLE,
+		geminiUrl: ECA.DEFAULT_GEMINI_URL,
+	})
 	.then((result) => {
 		preambleTextarea.value = result.preamble;
 		geminiUrlInput.value = result.geminiUrl;
@@ -41,10 +48,13 @@ saveBtn.addEventListener("click", () => {
 
 // Reset to default button
 resetBtn.addEventListener("click", () => {
-	preambleTextarea.value = DEFAULT_PREAMBLE;
-	geminiUrlInput.value = DEFAULT_GEMINI_URL;
+	preambleTextarea.value = ECA.DEFAULT_PREAMBLE;
+	geminiUrlInput.value = ECA.DEFAULT_GEMINI_URL;
 	chrome.storage.sync
-		.set({ preamble: DEFAULT_PREAMBLE, geminiUrl: DEFAULT_GEMINI_URL })
+		.set({
+			preamble: ECA.DEFAULT_PREAMBLE,
+			geminiUrl: ECA.DEFAULT_GEMINI_URL,
+		})
 		.then(() => {
 			showStatus("✓ Reset to default!", "success");
 		});

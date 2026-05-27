@@ -27,7 +27,7 @@
 				"*://*.ebay.at/itm/*",
 				"*://*.ebay.pl/itm/*"
 			],
-			"js": ["content.js"],
+			"js": ["config.js", "extractors.js", "ui.js", "content.js"],
 			"css": ["content.css"],
 			"run_at": "document_idle"
 		},
