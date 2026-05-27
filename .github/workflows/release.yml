@@ -62,10 +62,11 @@ jobs:
             console.log(`Generated update.xml for appid=${appid} version=${version}`);
           '
 
-      # Clean up the intermediate zip file so only extension.crx and update.xml are published
-      - name: Clean up temporary files
+      # Clean up the intermediate zip file and copy index.html
+      - name: Clean up temporary files & prepare landing page
         run: |
           rm -f build/extension.zip
+          cp index.html build/
 
       # Deploy build/ folder containing extension.crx and update.xml to gh-pages branch
       - name: Deploy to GitHub Pages
