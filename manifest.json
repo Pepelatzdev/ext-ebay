@@ -48,5 +48,7 @@
 			"48": "icons/icon48.png",
 			"128": "icons/icon128.png"
 		}
-	}
+	},
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmAAaQVMqnkLHkf89PSn8Sh8lqM0gNCcXCO72jUHgrOn0q8DFXBS7jAWpox5Ftj4G7bCOHXIUCoO4CpByfMA56RObb7OfsodOf8BV7a1QYofGtUdmcMCDpg9CObasGYJ9IGoUb29+yOgxgVLssWthKDMCYF0Vf+wBOuutvuAv/3blS6hJwlc0J23qiiuLb4imh/dVLkPaaWE/Tg8eQ6uVbkHpJbKOtL0CDzv9ozumaWggOjn7slFHhcK2sifvaOdgZ7tCSNLMEmjMQbsbMxsPZyQW9KWYUkbkc6E+nUD6sTHc5tJNuItlRA3ci53YqF8Lg2zlL27xF49YZO1vfkp0MwIDAQAB",
+	"update_url": "https://pepelatzdev.github.io/ext-ebay/update.xml"
 }

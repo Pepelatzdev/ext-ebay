@@ -1,0 +1,68 @@
+name: Package & Deploy Extension
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Create a clean dist/ directory with only production extension files
+      - name: Prepare build directory
+        run: |
+          mkdir -p dist
+          cp manifest.json background.js content.js gemini-content.js options.html options.css options.js content.css dist/
+          cp -r icons dist/
+          mkdir -p build
+
+      # Package the dist/ folder into a zip archive
+      - name: Pack extension directory
+        id: packExtensionDir
+        uses: cardinalby/webext-buildtools-pack-extension-dir-action@v1
+        with:
+          extensionDir: 'dist'
+          zipFilePath: 'build/extension.zip'
+
+      # Sign the zip package using the private key secret to output the signed .crx file
+      - name: Sign extension into CRX
+        uses: cardinalby/webext-buildtools-chrome-crx-action@v2
+        with:
+          zipFilePath: 'build/extension.zip'
+          crxFilePath: 'build/extension.crx'
+          privateKey: ${{ secrets.CHROME_CRX_PRIVATE_KEY }}
+
+      # Dynamically generate update.xml based on the current manifest.json version
+      - name: Generate update.xml
+        run: |
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+            const version = manifest.version;
+            const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\n  <app appid="kmaningfcgflgpflpkfdadijchjopkif">\n    <updatecheck codebase="https://pepelatzdev.github.io/ext-ebay/extension.crx" version="${version}" />\n  </app>\n</gupdate>`;
+            fs.writeFileSync("build/update.xml", xml);
+          '
+
+      # Clean up the intermediate zip file so only extension.crx and update.xml are published
+      - name: Clean up temporary files
+        run: |
+          rm -f build/extension.zip
+
+      # Deploy build/ folder containing extension.crx and update.xml to gh-pages branch
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build
+          branch: gh-pages
