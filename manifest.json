@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "eBay Copy Assistant",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "One-click copy of eBay product details as a prompt-ready text for chatbot consultation.",
 	"permissions": ["storage", "activeTab"],
 	"host_permissions": [
