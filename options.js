@@ -25,6 +25,15 @@ chrome.storage.sync
 		geminiUrlInput.value = result.geminiUrl;
 	});
 
+function isValidGeminiUrl(rawUrl) {
+	try {
+		const u = new URL(rawUrl);
+		return u.protocol === "https:" && u.hostname === ECA.GEMINI_HOST;
+	} catch {
+		return false;
+	}
+}
+
 // Save button
 saveBtn.addEventListener("click", () => {
 	const preambleValue = preambleTextarea.value.trim();
@@ -38,11 +47,18 @@ saveBtn.addEventListener("click", () => {
 		showStatus("Gemini URL cannot be empty.", "error");
 		return;
 	}
+	if (!isValidGeminiUrl(geminiUrlValue)) {
+		showStatus(`URL must start with https://${ECA.GEMINI_HOST}/`, "error");
+		return;
+	}
 
 	chrome.storage.sync
 		.set({ preamble: preambleValue, geminiUrl: geminiUrlValue })
 		.then(() => {
 			showStatus("✓ Saved!", "success");
+		})
+		.catch((err) => {
+			showStatus(`Save failed: ${err.message}`, "error");
 		});
 });
 
@@ -57,7 +73,17 @@ resetBtn.addEventListener("click", () => {
 		})
 		.then(() => {
 			showStatus("✓ Reset to default!", "success");
+		})
+		.catch((err) => {
+			showStatus(`Reset failed: ${err.message}`, "error");
 		});
+});
+
+// Reflect changes made in another tab/device.
+chrome.storage.onChanged.addListener((changes, area) => {
+	if (area !== "sync") return;
+	if (changes.preamble) preambleTextarea.value = changes.preamble.newValue;
+	if (changes.geminiUrl) geminiUrlInput.value = changes.geminiUrl.newValue;
 });
 
 function showStatus(message, type) {

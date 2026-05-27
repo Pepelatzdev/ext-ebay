@@ -63,9 +63,7 @@ function extractAuctionData() {
 	if (isAuction) {
 		bidPrice = defaultPriceEl?.textContent?.trim() || "";
 		const binPriceEl = document.querySelector(S.binPrice);
-		if (binPriceEl) {
-			binPrice = binPriceEl.textContent.trim();
-		}
+		binPrice = binPriceEl?.textContent?.trim() || "";
 	} else {
 		binPrice = defaultPriceEl?.textContent?.trim() || "";
 	}
@@ -221,7 +219,7 @@ async function extractDescription() {
 		const el = document.querySelector(sel);
 		if (el) {
 			const text = el.textContent?.trim() || "";
-			if (text.length > 60) return text;
+			if (text.length > ECA.MIN_DESCRIPTION_LENGTH) return text;
 		}
 	}
 
@@ -247,12 +245,12 @@ function formatPrompt(preamble, data) {
 		lines.push(`\n**Seller:** ${data.seller.name}${feedback}`);
 	}
 
-	if (data.reviews.length > 0) {
+	if (data.reviews?.length > 0) {
 		lines.push("\n**Seller Reviews:**");
 		for (const r of data.reviews) lines.push(`- "${r}"`);
 	}
 
-	if (data.specs.length > 0) {
+	if (data.specs?.length > 0) {
 		lines.push("\n**Item Specifics:**");
 		for (const s of data.specs) lines.push(`- ${s.label}: ${s.value}`);
 	}

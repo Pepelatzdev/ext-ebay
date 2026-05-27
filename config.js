@@ -15,6 +15,18 @@ var ECA = {
 		"Ось інформація про товар з eBay. Допоможи мені оцінити цю пропозицію:",
 	DEFAULT_GEMINI_URL: "https://gemini.google.com/gem/cb9c9074ac8d",
 
+	// ── Security ──────────────────────────────────────────────
+	GEMINI_HOST: "gemini.google.com",
+	// Hosts allowed for background-proxied fetches (eBay description iframes).
+	DESC_FETCH_HOST_SUFFIXES: [".ebaydesc.com", ".ebay.com"],
+	// Hard cap on description fetch to keep the service worker from being
+	// killed mid-flight on slow networks.
+	DESC_FETCH_TIMEOUT_MS: 10000,
+	// pendingPrompt is dropped if the user does not land on Gemini within this window.
+	PENDING_PROMPT_TTL_MS: 5 * 60 * 1000,
+	// Minimum length for a description container to be accepted as fallback text.
+	MIN_DESCRIPTION_LENGTH: 60,
+
 	// ── CSS class names ───────────────────────────────────────
 	FLOATING_CLASS: "ebay-copy--floating",
 	CONTAINER_ID: "ebay-copy-assistant-container",

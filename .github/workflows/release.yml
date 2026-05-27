@@ -44,15 +44,22 @@ jobs:
           crxFilePath: 'build/extension.crx'
           privateKey: ${{ secrets.CHROME_CRX_PRIVATE_KEY }}
 
-      # Dynamically generate update.xml based on the current manifest.json version
+      # Dynamically generate update.xml based on the current manifest.json
+      # (both version and the extension ID derived from manifest.key)
       - name: Generate update.xml
         run: |
           node -e '
             const fs = require("fs");
+            const crypto = require("crypto");
             const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+            if (!manifest.key) throw new Error("manifest.json is missing the \"key\" field");
+            const der = Buffer.from(manifest.key, "base64");
+            const hash = crypto.createHash("sha256").update(der).digest("hex");
+            const appid = hash.slice(0, 32).split("").map(c => String.fromCharCode(97 + parseInt(c, 16))).join("");
             const version = manifest.version;
-            const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\n  <app appid="kmaningfcgflgpflpkfdadijchjopkif">\n    <updatecheck codebase="https://pepelatzdev.github.io/ext-ebay/extension.crx" version="${version}" />\n  </app>\n</gupdate>`;
+            const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\n  <app appid="${appid}">\n    <updatecheck codebase="https://pepelatzdev.github.io/ext-ebay/extension.crx" version="${version}" />\n  </app>\n</gupdate>`;
             fs.writeFileSync("build/update.xml", xml);
+            console.log(`Generated update.xml for appid=${appid} version=${version}`);
           '
 
       # Clean up the intermediate zip file so only extension.crx and update.xml are published

@@ -25,7 +25,7 @@ const SVG = {
 
 // ── UI Helpers ───────────────────────────────────────────────
 
-var feedbackTimer = null;
+let feedbackTimer = null;
 
 function btnHTML(icon, label) {
 	return `<span class="ux-call-to-action__cell-with-icon">${icon}<span class="ux-call-to-action__text">${label}</span></span>`;
@@ -40,12 +40,14 @@ function showFeedback(targetBtn, type) {
 		? SVG[type]
 		: btnHTML(SVG[type], ECA.FEEDBACK_LABEL[type]);
 	targetBtn.classList.add(`ebay-copy--${type}`);
+	targetBtn.style.pointerEvents = "none";
 
 	feedbackTimer = setTimeout(() => {
 		targetBtn.innerHTML = isFloating
 			? SVG.sparkle
 			: btnHTML(SVG.sparkle, "Ask Gemini");
 		targetBtn.classList.remove(`ebay-copy--${type}`);
+		targetBtn.style.pointerEvents = "";
 		feedbackTimer = null;
 	}, ECA.FEEDBACK_DELAY[type]);
 }
@@ -97,35 +99,72 @@ async function renderUI() {
 
 // ── Report Ready Card ────────────────────────────────────────
 
+function isSafeGeminiUrl(rawUrl) {
+	try {
+		const u = new URL(rawUrl);
+		return u.protocol === "https:" && u.hostname === ECA.GEMINI_HOST;
+	} catch {
+		return false;
+	}
+}
+
 function renderReportReady(container, chatUrl, itemId, watchContainer) {
+	// Defense-in-depth: never render a URL that wasn't written by our own
+	// gemini-content.js running on gemini.google.com.
+	if (!isSafeGeminiUrl(chatUrl)) {
+		renderAskButton(container, itemId, watchContainer);
+		return;
+	}
+
 	container.classList.add("ebay-copy-report-box");
 
-	container.innerHTML = `
-		<div class="ebay-copy-report-box__header">
-			<div class="ebay-copy-report-box__title">
-				${SVG.report}
-				<span>Gemini Report Ready</span>
-			</div>
-			<button id="${ECA.RESET_BTN_ID}" class="ebay-copy-report-box__reset" type="button">Ask again</button>
-		</div>
-		<a href="${chatUrl}" target="_blank" class="ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--primary ebay-copy-report-box__link">View Report</a>
-	`;
+	const header = document.createElement("div");
+	header.className = "ebay-copy-report-box__header";
+
+	const title = document.createElement("div");
+	title.className = "ebay-copy-report-box__title";
+	// SVG.report is a static string literal — safe to set as innerHTML.
+	title.innerHTML = SVG.report;
+	const titleText = document.createElement("span");
+	titleText.textContent = "Gemini Report Ready";
+	title.appendChild(titleText);
+
+	const resetBtn = document.createElement("button");
+	resetBtn.id = ECA.RESET_BTN_ID;
+	resetBtn.type = "button";
+	resetBtn.className = "ebay-copy-report-box__reset";
+	resetBtn.textContent = "Ask again";
+
+	header.append(title, resetBtn);
+
+	const link = document.createElement("a");
+	link.className =
+		"ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--primary ebay-copy-report-box__link";
+	link.target = "_blank";
+	link.rel = "noopener noreferrer";
+	link.href = chatUrl;
+	link.textContent = "View Report";
+
+	container.replaceChildren(header, link);
 
 	insertAfterWatch(container, watchContainer);
 
-	document
-		.getElementById(ECA.RESET_BTN_ID)
-		.addEventListener("click", async () => {
+	resetBtn.addEventListener("click", async () => {
+		try {
 			await chrome.storage.sync.remove([`chat_${itemId}`]);
 
 			// Clean up the item from the FIFO order array
 			const syncData = await chrome.storage.sync.get(["chatHistoryOrder"]);
-			let order = syncData.chatHistoryOrder || [];
-			order = order.filter((id) => id !== itemId);
+			const order = (syncData.chatHistoryOrder || []).filter(
+				(id) => id !== itemId,
+			);
 			await chrome.storage.sync.set({ chatHistoryOrder: order });
+		} catch (e) {
+			console.error("eBay Copy Assistant: Failed to reset chat link", e);
+		}
 
-			renderUI();
-		});
+		renderUI();
+	});
 }
 
 // ── Ask Gemini Button ────────────────────────────────────────
@@ -155,9 +194,8 @@ function renderAskButton(container, itemId, watchContainer) {
 
 function handleAskGemini(btn, itemId) {
 	return async () => {
+		btn.style.pointerEvents = "none";
 		try {
-			btn.style.pointerEvents = "none";
-
 			const data = {
 				title: extractTitle(),
 				...extractAuctionData(),
@@ -180,19 +218,26 @@ function handleAskGemini(btn, itemId) {
 			await chrome.storage.local.set({
 				pendingPrompt: promptText,
 				activePromptItemId: itemId,
+				pendingPromptAt: Date.now(),
 			});
 
-			chrome.runtime.sendMessage({
+			const resp = await chrome.runtime.sendMessage({
 				type: "OPEN_GEMINI_TAB",
 				url: geminiUrl || ECA.DEFAULT_GEMINI_URL,
 			});
 
-			showFeedback(btn, "success");
+			if (resp && resp.success === false) {
+				console.error(
+					"eBay Copy Assistant: Failed to open Gemini tab",
+					resp.error,
+				);
+				showFeedback(btn, "error");
+			} else {
+				showFeedback(btn, "success");
+			}
 		} catch (err) {
 			console.error("eBay Copy Assistant: Failed to copy", err);
 			showFeedback(btn, "error");
-		} finally {
-			btn.style.pointerEvents = "auto";
 		}
 	};
 }

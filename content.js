@@ -13,12 +13,23 @@
 	// Prevent double injection
 	if (document.getElementById(ECA.CONTAINER_ID)) return;
 
-	// Initialize UI
+	const itemId = window.location.href.match(ECA.ITEM_ID_RE)?.[1];
+
 	renderUI();
 
-	// Listen for window focus to refresh UI status dynamically
-	// (detects "Report Ready" state after returning from Gemini tab)
-	window.addEventListener("focus", () => {
-		renderUI();
-	});
+	// Re-render only when our chat link for this item changes from another
+	// tab (e.g., the Gemini tab finishes saving the URL). Avoids the
+	// previous per-focus full re-render with its extra storage read.
+	if (itemId) {
+		const key = `chat_${itemId}`;
+		try {
+			chrome.storage.onChanged.addListener((changes, area) => {
+				if (area === "sync" && key in changes) renderUI();
+			});
+		} catch (e) {
+			if (!String(e?.message).includes("Extension context invalidated")) {
+				console.warn("eBay Copy Assistant: onChanged listener failed", e);
+			}
+		}
+	}
 })();
