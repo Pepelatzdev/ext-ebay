@@ -33,9 +33,14 @@ function isAllowedGeminiUrl(rawUrl) {
 	}
 }
 
-chrome.runtime.onInstalled.addListener((details) => {
-	if (details.reason === "install") {
-		chrome.storage.sync.set({ preamble: ECA.DEFAULT_PREAMBLE });
+chrome.runtime.onInstalled.addListener(async (details) => {
+	if (details.reason !== "install") return;
+	const existing = await chrome.storage.sync.get(["preamble", "geminiUrl"]);
+	const defaults = {};
+	if (!existing.preamble) defaults.preamble = ECA.DEFAULT_PREAMBLE;
+	if (!existing.geminiUrl) defaults.geminiUrl = ECA.DEFAULT_GEMINI_URL;
+	if (Object.keys(defaults).length > 0) {
+		chrome.storage.sync.set(defaults);
 	}
 });
 
