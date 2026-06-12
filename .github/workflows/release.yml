@@ -20,56 +20,42 @@ jobs:
         with:
           node-version: 22
 
-      # Create a clean dist/ directory with only production extension files
-      - name: Prepare build directory
+      - name: Pack extension zip
+        run: node scripts/pack.js
+
+      - name: Get Chrome Web Store access token
+        id: token
         run: |
-          mkdir -p dist
-          cp manifest.json background.js config.js extractors.js ui.js content.js gemini-content.js options.html options.css options.js content.css dist/
-          cp -r icons dist/
-          mkdir -p build
+          TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${{ secrets.CHROME_CLIENT_ID }}&client_secret=${{ secrets.CHROME_CLIENT_SECRET }}&refresh_token=${{ secrets.CHROME_REFRESH_TOKEN }}&grant_type=refresh_token" \
+            | jq -r '.access_token')
+          echo "::add-mask::$TOKEN"
+          echo "value=$TOKEN" >> $GITHUB_OUTPUT
 
-      # Package the dist/ folder into a zip archive
-      - name: Pack extension directory
-        id: packExtensionDir
-        uses: cardinalby/webext-buildtools-pack-extension-dir-action@v1
-        with:
-          extensionDir: 'dist'
-          zipFilePath: 'build/extension.zip'
-
-      # Sign the zip package using the private key secret to output the signed .crx file
-      - name: Sign extension into CRX
-        uses: cardinalby/webext-buildtools-chrome-crx-action@v2
-        with:
-          zipFilePath: 'build/extension.zip'
-          crxFilePath: 'build/extension.crx'
-          privateKey: ${{ secrets.CHROME_CRX_PRIVATE_KEY }}
-
-      # Dynamically generate update.xml based on the current manifest.json
-      # (both version and the extension ID derived from manifest.key)
-      - name: Generate update.xml
+      - name: Upload zip to Chrome Web Store
         run: |
-          node -e '
-            const fs = require("fs");
-            const crypto = require("crypto");
-            const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
-            if (!manifest.key) throw new Error("manifest.json is missing the \"key\" field");
-            const der = Buffer.from(manifest.key, "base64");
-            const hash = crypto.createHash("sha256").update(der).digest("hex");
-            const appid = hash.slice(0, 32).split("").map(c => String.fromCharCode(97 + parseInt(c, 16))).join("");
-            const version = manifest.version;
-            const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\n  <app appid="${appid}">\n    <updatecheck codebase="https://pepelatzdev.github.io/ext-ebay/extension.crx" version="${version}" />\n  </app>\n</gupdate>`;
-            fs.writeFileSync("build/update.xml", xml);
-            console.log(`Generated update.xml for appid=${appid} version=${version}`);
-          '
+          curl -s -X PUT \
+            -H "Authorization: Bearer ${{ steps.token.outputs.value }}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Type: application/zip" \
+            -T extension.zip \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}" \
+            | tee /tmp/upload.json | jq .
+          jq -e '.uploadState | test("SUCCESS|IN_PROGRESS")' /tmp/upload.json
 
-      # Clean up the intermediate zip file and copy index.html
-      - name: Clean up temporary files & prepare landing page
+      - name: Publish on Chrome Web Store
         run: |
-          rm -f build/extension.zip
-          cp index.html build/
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ steps.token.outputs.value }}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}/publish" \
+            | jq .
 
-      # Deploy build/ folder containing extension.crx and update.xml to gh-pages branch
-      - name: Deploy to GitHub Pages
+      - name: Prepare landing page
+        run: mkdir -p build && cp index.html build/
+
+      - name: Deploy landing page to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build
