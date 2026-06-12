@@ -232,7 +232,7 @@ function formatPrompt(preamble, data) {
 	const lines = [`${preamble}\n\n---\n`];
 
 	if (data.title) lines.push(`**Product:** ${data.title}`);
-	lines.push(`**URL:** ${window.location.href}`);
+	lines.push(`**URL:** ${window.location.href.split("?")[0]}`);
 	lines.push(`**Listing Type:** ${data.type}`);
 	if (data.bidPrice) lines.push(`**Current Bid:** ${data.bidPrice}`);
 	if (data.binPrice) lines.push(`**Buy It Now Price:** ${data.binPrice}`);
