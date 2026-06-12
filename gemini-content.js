@@ -17,7 +17,11 @@
 	// Kept in sync with config.js ECA.PENDING_PROMPT_TTL_MS. Not imported
 	// because this script runs on Gemini, where config.js is not loaded.
 	const PENDING_PROMPT_TTL_MS = 5 * 60 * 1000;
-	const CHAT_PATH_RE = /\/(app|chat|chats)\//;
+	// Matches a started conversation: /app/<id>, /chat(s)/<id>, or a chat
+	// inside a Gem (/gem/<gemId>/<chatId>). A bare Gem landing page
+	// (/gem/<gemId>) must NOT match, or we would persist it before the
+	// conversation exists.
+	const CHAT_PATH_RE = /\/(app|chat|chats)\/[^/?#]|\/gem\/[^/?#]+\/[^/?#]/;
 
 	function safe(fn) {
 		try {
