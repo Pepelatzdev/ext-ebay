@@ -4,10 +4,9 @@
 
 .ebay-copy-container {
 	margin-top: 8px;
-	width: 100%;
 }
 
-/* ── Fallback: floating button ─────────────────────────────── */
+/* ── Fallback: floating button (no eBay equivalent) ────────── */
 
 .ebay-copy--floating {
 	position: fixed;
@@ -34,7 +33,6 @@
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* Floating button: state feedback */
 .ebay-copy--floating.ebay-copy--success {
 	background: rgba(34, 139, 34, 0.92) !important;
 }
@@ -42,13 +40,12 @@
 	background: rgba(200, 40, 40, 0.92) !important;
 }
 
-/* Floating button: SVG icon size */
 .ebay-copy--floating svg {
 	width: 20px;
 	height: 20px;
 }
 
-/* ── Inline button ─────────────────────────────────────────── */
+/* ── SVG icon sizes (eBay has no rules for our custom icons) ── */
 
 .ebay-copy-btn svg {
 	width: 16px;
@@ -58,29 +55,14 @@
 	flex-shrink: 0;
 }
 
-/* Inline button: state feedback */
-.ebay-copy-btn.ebay-copy--success {
-	background-color: #e5f6e5 !important;
-	border-color: rgba(34, 139, 34, 0.92) !important;
-	color: rgba(34, 139, 34, 0.92) !important;
+.ebay-copy-icon--sparkle,
+.ebay-copy-icon--report {
+	width: 18px;
+	height: 18px;
+	vertical-align: middle;
 }
 
-.ebay-copy-btn.ebay-copy--error {
-	background-color: #fdeaea !important;
-	border-color: rgba(200, 40, 40, 0.92) !important;
-	color: rgba(200, 40, 40, 0.92) !important;
-}
-
-/* ── Report Ready Card ─────────────────────────────────────── */
-
-.ebay-copy-report-box {
-	background: #f7f7f7;
-	border: 1px solid #e5e5e5;
-	border-radius: 8px;
-	padding: 16px;
-	font-family: inherit;
-	box-sizing: border-box;
-}
+/* ── Report Ready Card: layout only ────────────────────────── */
 
 .ebay-copy-report-box__header {
 	display: flex;
@@ -92,40 +74,5 @@
 .ebay-copy-report-box__title {
 	display: flex;
 	align-items: center;
-	color: #191919;
-	font-weight: 600;
-	font-size: 14px;
 	gap: 6px;
-}
-
-.ebay-copy-report-box__reset {
-	background: none;
-	border: none;
-	color: #0053a0;
-	font-size: 12px;
-	cursor: pointer;
-	text-decoration: underline;
-	font-weight: 500;
-	padding: 0;
-}
-
-.ebay-copy-report-box__reset:hover {
-	color: #003366;
-}
-
-.ebay-copy-report-box__link {
-	display: block;
-	text-align: center;
-	text-decoration: none;
-	box-sizing: border-box;
-	margin-top: 8px;
-}
-
-/* ── Shared icon sizes (sparkle & report) ──────────────────── */
-
-.ebay-copy-icon--sparkle,
-.ebay-copy-icon--report {
-	width: 18px;
-	height: 18px;
-	vertical-align: middle;
 }

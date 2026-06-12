@@ -116,8 +116,6 @@ function renderReportReady(container, chatUrl, itemId, watchContainer) {
 		return;
 	}
 
-	container.classList.add("ebay-copy-report-box");
-
 	const header = document.createElement("div");
 	header.className = "ebay-copy-report-box__header";
 
@@ -126,20 +124,21 @@ function renderReportReady(container, chatUrl, itemId, watchContainer) {
 	// SVG.report is a static string literal — safe to set as innerHTML.
 	title.innerHTML = SVG.report;
 	const titleText = document.createElement("span");
+	titleText.className = "ux-textspans ux-textspans--BOLD";
 	titleText.textContent = "Gemini Report Ready";
 	title.appendChild(titleText);
 
 	const resetBtn = document.createElement("button");
 	resetBtn.id = ECA.RESET_BTN_ID;
 	resetBtn.type = "button";
-	resetBtn.className = "ebay-copy-report-box__reset";
+	resetBtn.className = "fake-link";
 	resetBtn.textContent = "Ask again";
 
 	header.append(title, resetBtn);
 
 	const link = document.createElement("a");
 	link.className =
-		"ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--primary ebay-copy-report-box__link";
+		"ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--primary";
 	link.target = "_blank";
 	link.rel = "noopener noreferrer";
 	link.href = chatUrl;
