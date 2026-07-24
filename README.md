@@ -33,7 +33,17 @@ eBay Copy Assistant — розширення для Google Chrome, яке зби
 
 Для AI-аналізу потрібен доступ до [Google Gemini](https://gemini.google.com/) і налаштований Gemini Gem.
 
-## Встановлення для розробки
+## Встановлення
+
+### Chrome Web Store
+
+1. Відкрийте сторінку [eBay Copy Assistant у Chrome Web Store](https://chromewebstore.google.com/detail/ebay-copy-assistant/ekchfjieilkcaajpefdacpmibbglikip).
+2. Натисніть **Add to Chrome** і підтвердьте встановлення.
+3. За потреби закріпіть іконку розширення на панелі Chrome для швидкого доступу до **Options**.
+
+Оновлення встановленої версії надходять через Chrome Web Store.
+
+### Встановлення з репозиторію (unpacked)
 
 1. Клонуйте репозиторій:
 
@@ -46,8 +56,6 @@ eBay Copy Assistant — розширення для Google Chrome, яке зби
 3. Увімкніть **Developer mode**.
 4. Натисніть **Load unpacked** і виберіть кореневу папку проєкту.
 5. Після зміни вихідних файлів натисніть **Reload** на картці розширення та оновіть відкриті сторінки eBay/Gemini.
-
-> Релізний workflow завантажує ZIP-архів у Chrome Web Store через API. README не містить прямого посилання на сторінку розширення, оскільки публічний URL лістингу не зафіксований у репозиторії.
 
 ## Використання
 

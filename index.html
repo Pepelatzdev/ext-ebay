@@ -248,6 +248,26 @@
       color: #fff;
     }
 
+    .developer-note {
+      margin: 24px 0 0;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .developer-note a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .developer-note a:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+
     .footer {
       margin-top: 48px;
       font-size: 12px;
@@ -273,14 +293,19 @@
     <div class="version-tag">VERSION 1.0.2</div>
     
     <p class="description">
-      One-click copy of eBay product details as a prompt-ready text for Google Gemini analysis, complete with cross-device chat sync.
+      Analyze eBay listings with Google Gemini in one click, then reopen or refresh each saved report directly from the item page.
     </p>
 
-    <a href="extension.crx" class="btn-download" download>
+    <a
+      href="https://chromewebstore.google.com/detail/ebay-copy-assistant/ekchfjieilkcaajpefdacpmibbglikip"
+      class="btn-download"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <svg aria-hidden="true" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
       </svg>
-      Download Extension
+      Install from Chrome Web Store
     </a>
 
     <div class="instructions-card">
@@ -288,40 +313,44 @@
         <svg aria-hidden="true" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
         </svg>
-        Installation Instructions
+        How it works
       </div>
-      
+
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
           <div class="step-text">
-            Click the button above to download the <strong>extension.crx</strong> file to your computer.
+            Install the extension from the <strong>Chrome Web Store</strong>.
           </div>
         </div>
         <div class="step">
           <div class="step-num">2</div>
           <div class="step-text">
-            Open Google Chrome and navigate to <strong>chrome://extensions/</strong>.
+            Open a supported eBay item page and click <strong>Ask Gemini</strong>.
           </div>
         </div>
         <div class="step">
           <div class="step-num">3</div>
           <div class="step-text">
-            Enable <strong>Developer mode</strong> using the switch in the top-right corner.
+            Review the inserted listing prompt and send it to Gemini.
           </div>
         </div>
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-text">
-            Drag and drop the downloaded <strong>extension.crx</strong> file anywhere onto the extensions page to install.
+            Return to eBay to <strong>Show report</strong> or <strong>Ask again</strong>.
           </div>
         </div>
       </div>
+      <p class="developer-note">
+        Developing locally? Follow the unpacked installation instructions in the
+        <a href="https://github.com/Pepelatzdev/ext-ebay" target="_blank" rel="noopener noreferrer">GitHub repository</a>.
+      </p>
     </div>
   </div>
 
   <div class="footer">
-    Powering smart eBay research · <a href="https://github.com/Pepelatzdev/ext-ebay" target="_blank">View Repository</a>
+    Powering smart eBay research · <a href="https://github.com/Pepelatzdev/ext-ebay" target="_blank" rel="noopener noreferrer">View Repository</a>
   </div>
 
 </body>
