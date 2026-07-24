@@ -23,3 +23,23 @@ describe("manifest compliance", () => {
 		);
 	});
 });
+
+it("publishes and links the privacy policy", () => {
+	const privacy = readFileSync(resolve("privacy.html"), "utf8");
+	const landing = readFileSync(resolve("index.html"), "utf8");
+	const options = readFileSync(resolve("options.html"), "utf8");
+	expect(privacy).toContain("Google Gemini");
+	expect(privacy).toContain("chrome.storage.session");
+	expect(privacy).toContain("Chrome Web Store User Data Policy");
+	expect(landing).toContain("privacy.html");
+	expect(options).toContain(
+		"https://pepelatzdev.github.io/ext-ebay/privacy.html",
+	);
+});
+
+it("contains a complete MIT license", () => {
+	const license = readFileSync(resolve("LICENSE"), "utf8");
+	expect(license).toContain("MIT License");
+	expect(license).toContain("Copyright (c) 2026 Pepelatzdev");
+	expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
+});

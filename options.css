@@ -169,3 +169,18 @@ input[type="url"]::placeholder {
 .status.error {
 	color: #ff6b6b;
 }
+
+.privacy-link {
+	margin-top: 20px;
+	text-align: center;
+	font-size: 12px;
+}
+
+.privacy-link a {
+	color: #8892b0;
+}
+
+.privacy-link a:hover,
+.privacy-link a:focus-visible {
+	color: #64ffda;
+}
