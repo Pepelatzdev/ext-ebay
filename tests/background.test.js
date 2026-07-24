@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const scripts = [
 	"config.js",
+	"message-validation.js",
 	"request-store.js",
 	"report-store.js",
 	"background.js",
@@ -28,6 +29,15 @@ function createWorker() {
 		remove: vi.fn(async (keys) => {
 			for (const key of Array.isArray(keys) ? keys : [keys]) delete data[key];
 		}),
+		getBytesInUse: vi.fn(async () =>
+			Object.entries(data).reduce(
+				(total, [key, value]) =>
+					total +
+					new TextEncoder().encode(key).length +
+					new TextEncoder().encode(JSON.stringify(value)).length,
+				0,
+			),
+		),
 	});
 	const chrome = {
 		alarms: {
@@ -55,6 +65,23 @@ function createWorker() {
 }
 
 describe("background Gemini request flow", () => {
+	it("rejects forged privileged payloads before opening a tab", async () => {
+		const { ECA, chrome, handleMessage, session } = createWorker();
+		const result = await handleMessage(
+			{
+				type: ECA.MESSAGE.START,
+				itemId: "111",
+				prompt: "A",
+				url: "https://gemini.google.com/gem/id",
+				tabId: 999,
+			},
+			{ url: "https://www.ebay.com/itm/111", tab: { id: 1 } },
+		);
+		expect(result).toMatchObject({ success: false });
+		expect(chrome.tabs.create).not.toHaveBeenCalled();
+		expect(session).toEqual({});
+	});
+
 	it("keeps two simultaneous requests bound to their Gemini tabs", async () => {
 		const { ECA, handleMessage } = createWorker();
 		const gemUrl = "https://gemini.google.com/gem/id";
