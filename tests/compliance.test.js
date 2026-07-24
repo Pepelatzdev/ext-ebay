@@ -49,3 +49,15 @@ it("deploys both landing and privacy pages", () => {
 	expect(workflow).toContain("cp index.html build/");
 	expect(workflow).toContain("cp privacy.html build/");
 });
+
+it("documents current limits permissions and privacy URL", () => {
+	const readme = readFileSync(resolve("README.md"), "utf8");
+	expect(readme).toContain("100 000");
+	expect(readme).toContain("120 000");
+	expect(readme).toContain("[Description truncated]");
+	expect(readme).toContain("200");
+	expect(readme).toContain("80");
+	expect(readme).toContain("storage.session");
+	expect(readme).toContain("alarms");
+	expect(readme).toContain("privacy.html");
+});
