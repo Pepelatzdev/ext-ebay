@@ -1,24 +1,88 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const code = readFileSync(resolve("report-store.js"), "utf8");
+const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
 
-it("stores a report and keeps current FIFO behavior", async () => {
-	const data = { chatHistoryOrder: ["old", "123"] };
-	const chrome = {
-		storage: {
-			sync: {
-				get: vi.fn(async () => ({ ...data })),
-				set: vi.fn(async (value) => Object.assign(data, value)),
-				remove: vi.fn(async () => {}),
-			},
-		},
+function createStore(initial = {}) {
+	const data = structuredClone(initial);
+	const sync = {
+		get: vi.fn(async (query) => {
+			if (query === null) return { ...data };
+			const keys = Array.isArray(query) ? query : [query];
+			return Object.fromEntries(
+				keys.filter((key) => key in data).map((key) => [key, data[key]]),
+			);
+		}),
+		set: vi.fn(async (updates) => Object.assign(data, updates)),
+		remove: vi.fn(async (keys) => {
+			for (const key of Array.isArray(keys) ? keys : [keys]) delete data[key];
+		}),
+		getBytesInUse: vi.fn(async () =>
+			Object.entries(data).reduce(
+				(total, [key, value]) => total + bytes(key) + bytes(value),
+				0,
+			),
+		),
 	};
+	const chrome = { __data: data, storage: { sync } };
 	const store = new Function("chrome", `${code}; return ECAReportStore;`)(
 		chrome,
 	);
-	await store.save("123", "https://gemini.google.com/app/report");
-	expect(data.chat_123).toBe("https://gemini.google.com/app/report");
-	expect(data.chatHistoryOrder).toEqual(["old", "123"]);
+	return { chrome, data, store };
+}
+
+describe("quota-aware report store", () => {
+	it("deduplicates history and keeps the newest occurrence", async () => {
+		const { data, store } = createStore({
+			chat_1: "https://gemini.google.com/app/one",
+			chat_2: "https://gemini.google.com/app/two",
+			chatHistoryOrder: ["1", "2", "1", "missing"],
+		});
+		await store.save("1", "https://gemini.google.com/app/replacement");
+		expect(data.chatHistoryOrder).toEqual(["2", "1"]);
+	});
+
+	it("prunes to at most 200 reports", async () => {
+		const initial = { chatHistoryOrder: [] };
+		for (let index = 0; index < 200; index++) {
+			initial.chatHistoryOrder.push(String(index));
+			initial[`chat_${index}`] = `https://gemini.google.com/app/${index}`;
+		}
+		const { data, store } = createStore(initial);
+		await store.save("new", "https://gemini.google.com/app/new");
+		expect(data.chatHistoryOrder).toHaveLength(200);
+		expect(data.chatHistoryOrder.at(-1)).toBe("new");
+		expect(data.chat_0).toBeUndefined();
+	});
+
+	it("prunes large oldest URLs to the 80 KiB target", async () => {
+		const initial = { chatHistoryOrder: [] };
+		for (let index = 0; index < 100; index++) {
+			initial.chatHistoryOrder.push(String(index));
+			initial[`chat_${index}`] =
+				`https://gemini.google.com/app/${"x".repeat(1000)}${index}`;
+		}
+		const { chrome, data, store } = createStore(initial);
+		await store.save("new", "https://gemini.google.com/app/new");
+		expect(await chrome.storage.sync.getBytesInUse(null)).toBeLessThanOrEqual(
+			80 * 1024,
+		);
+		expect(data.chat_new).toBeTruthy();
+	});
+
+	it("retries once after a quota error", async () => {
+		const { chrome, store } = createStore({
+			chat_old: "https://gemini.google.com/app/old",
+			chatHistoryOrder: ["old"],
+		});
+		chrome.storage.sync.set
+			.mockRejectedValueOnce(new Error("QUOTA_BYTES quota exceeded"))
+			.mockImplementationOnce(async (updates) =>
+				Object.assign(chrome.__data, updates),
+			);
+		await store.save("new", "https://gemini.google.com/app/new");
+		expect(chrome.storage.sync.set).toHaveBeenCalledTimes(2);
+	});
 });
