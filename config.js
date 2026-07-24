@@ -24,6 +24,15 @@ var ECA = {
 	DESC_FETCH_TIMEOUT_MS: 10000,
 	// pendingPrompt is dropped if the user does not land on Gemini within this window.
 	PENDING_PROMPT_TTL_MS: 5 * 60 * 1000,
+	MAX_DESCRIPTION_CHARS: 100_000,
+	MAX_PROMPT_CHARS: 120_000,
+	MESSAGE: {
+		START: "START_GEMINI_REQUEST",
+		CLAIM: "CLAIM_GEMINI_REQUEST",
+		ACK_INSERTED: "ACK_PROMPT_INSERTED",
+		SAVE_REPORT: "SAVE_GEMINI_REPORT",
+		FETCH_DESCRIPTION: "FETCH_DESCRIPTION",
+	},
 	// Minimum length for a description container to be accepted as fallback text.
 	MIN_DESCRIPTION_LENGTH: 60,
 
@@ -35,7 +44,7 @@ var ECA = {
 
 	// ── Timing ────────────────────────────────────────────────
 	FEEDBACK_DELAY: { success: 2000, error: 2500 },
-	FEEDBACK_LABEL: { success: "Copied!", error: "Error" },
+	FEEDBACK_LABEL: { success: "Gemini opened", error: "Error" },
 
 	// ── Patterns ──────────────────────────────────────────────
 	READ_MORE_RE: /^(Read more|See all)/i,

@@ -483,3 +483,12 @@ describe("extractSellerInfo", () => {
 		expect(info.feedback).toBe("");
 	});
 });
+
+describe("Gemini request limits", () => {
+	it("defines the approved TTL and prompt limits", () => {
+		expect(ECA.PENDING_PROMPT_TTL_MS).toBe(5 * 60 * 1000);
+		expect(ECA.MAX_DESCRIPTION_CHARS).toBe(100_000);
+		expect(ECA.MAX_PROMPT_CHARS).toBe(120_000);
+		expect(ECA.MESSAGE.START).toBe("START_GEMINI_REQUEST");
+	});
+});
