@@ -22,7 +22,7 @@ var ECA = {
 	// Hard cap on description fetch to keep the service worker from being
 	// killed mid-flight on slow networks.
 	DESC_FETCH_TIMEOUT_MS: 10000,
-	// pendingPrompt is dropped if the user does not land on Gemini within this window.
+	// A Gemini request expires if its target tab does not consume it in time.
 	PENDING_PROMPT_TTL_MS: 5 * 60 * 1000,
 	MAX_DESCRIPTION_CHARS: 100_000,
 	MAX_PROMPT_CHARS: 120_000,
