@@ -43,3 +43,9 @@ it("contains a complete MIT license", () => {
 	expect(license).toContain("Copyright (c) 2026 Pepelatzdev");
 	expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
 });
+
+it("deploys both landing and privacy pages", () => {
+	const workflow = readFileSync(resolve(".github/workflows/pages.yml"), "utf8");
+	expect(workflow).toContain("cp index.html build/");
+	expect(workflow).toContain("cp privacy.html build/");
+});
