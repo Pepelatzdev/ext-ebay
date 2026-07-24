@@ -1,7 +1,7 @@
 /**
  * eBay Copy Assistant — UI Rendering.
  *
- * Handles button creation, feedback states, and the "Report Ready" card.
+ * Handles button creation, feedback states, and saved-report actions.
  * Depends on ECA (config.js) and extractor functions (extractors.js).
  */
 
@@ -9,26 +9,45 @@
           extractItemSpecifics, extractShipping, extractReturns, extractSellerInfo,
           extractSellerReviews, extractDescription, formatPrompt */
 
-// ── SVG Icons ────────────────────────────────────────────────
-
-const SVG = {
-	copy: '<svg focusable="false" aria-hidden="true" fill="currentColor" viewBox="0 0 36 36" version="1.1" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><path d="M29.5,7h-19A1.5,1.5,0,0,0,9,8.5v24A1.5,1.5,0,0,0,10.5,34h19A1.5,1.5,0,0,0,31,32.5V8.5A1.5,1.5,0,0,0,29.5,7ZM29,32H11V9H29Z"></path><path d="M26,3.5A1.5,1.5,0,0,0,24.5,2H5.5A1.5,1.5,0,0,0,4,3.5v24A1.5,1.5,0,0,0,5.5,29H6V4H26Z"></path></svg>',
-	success:
-		'<svg focusable="false" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"></path></svg>',
+const SVG_PATH = {
+	success: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z",
 	error:
-		'<svg focusable="false" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"></path></svg>',
+		"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z",
 	sparkle:
-		'<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="ebay-copy-icon--sparkle"><path d="M12 2c.4 0 .7.3.9.7l2.2 5.2 5.2 2.2c.4.2.7.5.7.9s-.3.7-.7.9l-5.2 2.2-2.2 5.2c-.2.4-.5.7-.9.7s-.7-.3-.9-.7l-2.2-5.2-5.2-2.2c-.4-.2-.7-.5-.7-.9s.3-.7.7-.9l5.2-2.2 2.2-5.2c.2-.4.5-.7.9-.7z"/></svg>',
+		"M12 2c.4 0 .7.3.9.7l2.2 5.2 5.2 2.2c.4.2.7.5.7.9s-.3.7-.7.9l-5.2 2.2-2.2 5.2c-.2.4-.5.7-.9.7s-.7-.3-.9-.7l-2.2-5.2-5.2-2.2c-.4-.2-.7-.5-.7-.9s.3-.7.7-.9l5.2-2.2 2.2-5.2c.2-.4.5-.7.9-.7z",
 	report:
-		'<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="ebay-copy-icon--report"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>',
+		"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z",
 };
 
 // ── UI Helpers ───────────────────────────────────────────────
 
 let feedbackTimer = null;
 
-function btnHTML(icon, label) {
-	return `<span class="ebay-copy-action__content">${icon}<span class="ebay-copy-action__text">${label}</span></span>`;
+function createIcon(name) {
+	const namespace = "http://www.w3.org/2000/svg";
+	const svg = document.createElementNS(namespace, "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("fill", "currentColor");
+	svg.setAttribute("focusable", "false");
+	svg.setAttribute("aria-hidden", "true");
+	const path = document.createElementNS(namespace, "path");
+	path.setAttribute("d", SVG_PATH[name]);
+	svg.appendChild(path);
+	return svg;
+}
+
+function createButtonContent(icon, label) {
+	const content = document.createElement("span");
+	content.className = "ebay-copy-action__content";
+	const text = document.createElement("span");
+	text.className = "ebay-copy-action__text";
+	text.textContent = label;
+	content.append(createIcon(icon), text);
+	return content;
+}
+
+function setButtonContent(button, icon, label) {
+	button.replaceChildren(createButtonContent(icon, label));
 }
 
 function setBusy(button, busy) {
@@ -41,12 +60,12 @@ function showFeedback(targetBtn, type) {
 	if (feedbackTimer) clearTimeout(feedbackTimer);
 	if (!targetBtn) return;
 
-	const originalHTML = targetBtn.innerHTML;
-	targetBtn.innerHTML = btnHTML(SVG[type], ECA.FEEDBACK_LABEL[type]);
+	const originalContent = targetBtn.firstElementChild.cloneNode(true);
+	setButtonContent(targetBtn, type, ECA.FEEDBACK_LABEL[type]);
 	targetBtn.classList.add(`ebay-copy--${type}`);
 
 	feedbackTimer = setTimeout(() => {
-		targetBtn.innerHTML = originalHTML;
+		targetBtn.replaceChildren(originalContent);
 		targetBtn.classList.remove(`ebay-copy--${type}`);
 		setBusy(targetBtn, false);
 		feedbackTimer = null;
@@ -90,7 +109,7 @@ async function renderUI() {
 	}
 }
 
-// ── Report Ready Card ────────────────────────────────────────
+// ── Saved Report Actions ─────────────────────────────────────
 
 function isSafeGeminiUrl(rawUrl) {
 	try {
@@ -107,14 +126,14 @@ function renderReportReady(container, chatUrl, itemId) {
 	resetBtn.type = "button";
 	resetBtn.className = "ebay-copy-action ebay-copy-action--secondary";
 	resetBtn.setAttribute("aria-live", "polite");
-	resetBtn.innerHTML = btnHTML(SVG.sparkle, "Ask again");
+	setButtonContent(resetBtn, "sparkle", "Ask again");
 
 	const link = document.createElement("a");
 	link.className = "ebay-copy-action ebay-copy-action--primary";
 	link.target = "_blank";
 	link.rel = "noopener noreferrer";
 	link.href = chatUrl;
-	link.innerHTML = btnHTML(SVG.report, "Show report");
+	setButtonContent(link, "report", "Show report");
 
 	container.replaceChildren(resetBtn, link);
 	resetBtn.addEventListener("click", handleAskAgain(resetBtn, itemId));
@@ -129,7 +148,7 @@ function renderAskButton(container, itemId) {
 	btn.title = "Ask Gemini";
 	btn.className = "ebay-copy-action ebay-copy-action--primary";
 	btn.setAttribute("aria-live", "polite");
-	btn.innerHTML = btnHTML(SVG.sparkle, "Ask Gemini");
+	setButtonContent(btn, "sparkle", "Ask Gemini");
 
 	container.replaceChildren(btn);
 	btn.addEventListener("click", handleAskGemini(btn, itemId));

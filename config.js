@@ -37,7 +37,6 @@ var ECA = {
 	MIN_DESCRIPTION_LENGTH: 60,
 
 	// ── CSS class names ───────────────────────────────────────
-	FLOATING_CLASS: "ebay-copy--floating",
 	CONTAINER_ID: "ebay-copy-assistant-container",
 	BTN_ID: "ebay-copy-assistant-btn",
 	RESET_BTN_ID: "ebay-gemini-reset-btn",
@@ -95,7 +94,5 @@ var ECA = {
 			"#desc_div",
 			'[data-testid="d-item-description"]',
 		],
-		watchContainer: "#vi-atl-lnk-99",
-		watchButton: "#watchBtn_btn_1",
 	},
 };

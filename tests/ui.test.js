@@ -173,4 +173,18 @@ describe("floating Gemini actions", () => {
 			vi.useRealTimers();
 		}
 	});
+
+	it("builds runtime actions without innerHTML", async () => {
+		expect(uiCode).not.toContain(".innerHTML");
+		const { renderUI } = loadUi();
+		await renderUI();
+		const button = document.getElementById("ebay-copy-assistant-btn");
+		expect(button.querySelector("svg")).not.toBeNull();
+		expect(button.textContent).toContain("Ask Gemini");
+	});
+
+	it("defines reduced-motion and disabled styles", () => {
+		expect(contentCss).toContain("prefers-reduced-motion: reduce");
+		expect(contentCss).toContain(".ebay-copy-action:disabled");
+	});
 });
