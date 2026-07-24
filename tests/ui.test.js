@@ -10,6 +10,7 @@ const extractorsCode = readFileSync(
 	"utf8",
 );
 const uiCode = readFileSync(resolve(testDir, "../ui.js"), "utf8");
+const contentCss = readFileSync(resolve(testDir, "../content.css"), "utf8");
 
 function setUrl(url) {
 	Object.defineProperty(window, "location", {
@@ -62,14 +63,28 @@ beforeEach(() => {
 });
 
 describe("floating Gemini actions", () => {
+	it("styles the action container as a fixed bottom-right control", async () => {
+		const style = document.createElement("style");
+		style.textContent = contentCss;
+		document.head.appendChild(style);
+		const { renderUI } = loadUi();
+		await renderUI();
+
+		const container = document.getElementById("ebay-copy-assistant-container");
+		const computed = getComputedStyle(container);
+		expect(computed.position).toBe("fixed");
+		expect(computed.flexDirection).toBe("column");
+		expect(computed.zIndex).toBe("2147483647");
+		expect(contentCss).toContain("@media (max-width: 480px)");
+		style.remove();
+	});
+
 	it("renders Ask Gemini directly under body without watch-list markup", async () => {
 		const querySpy = vi.spyOn(document, "querySelector");
 		const { renderUI } = loadUi();
 		await renderUI();
 
-		const container = document.getElementById(
-			"ebay-copy-assistant-container",
-		);
+		const container = document.getElementById("ebay-copy-assistant-container");
 		expect(container?.parentElement).toBe(document.body);
 		expect(container?.textContent).toContain("Ask Gemini");
 		expect(querySpy).not.toHaveBeenCalledWith("#vi-atl-lnk-99");
@@ -78,15 +93,12 @@ describe("floating Gemini actions", () => {
 
 	it("renders Show report and Ask again for a safe chat URL", async () => {
 		globalThis.chrome = createChrome({
-			chat_123456789012:
-				"https://gemini.google.com/gem/example/chat-example",
+			chat_123456789012: "https://gemini.google.com/gem/example/chat-example",
 		});
 		const { renderUI } = loadUi();
 		await renderUI();
 
-		const link = document.querySelector(
-			"#ebay-copy-assistant-container a",
-		);
+		const link = document.querySelector("#ebay-copy-assistant-container a");
 		expect(link?.textContent).toContain("Show report");
 		expect(link?.href).toBe(
 			"https://gemini.google.com/gem/example/chat-example",
@@ -105,17 +117,14 @@ describe("floating Gemini actions", () => {
 		const { renderUI } = loadUi();
 		await renderUI();
 
-		const container = document.getElementById(
-			"ebay-copy-assistant-container",
-		);
+		const container = document.getElementById("ebay-copy-assistant-container");
 		expect(container?.textContent).toContain("Ask Gemini");
 		expect(container?.querySelector("a")).toBeNull();
 	});
 
 	it("clears the saved report and starts a new Gemini request", async () => {
 		globalThis.chrome = createChrome({
-			chat_123456789012:
-				"https://gemini.google.com/gem/example/chat-example",
+			chat_123456789012: "https://gemini.google.com/gem/example/chat-example",
 			chatHistoryOrder: ["older-item", "123456789012"],
 		});
 		document.body.innerHTML =

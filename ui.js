@@ -50,6 +50,7 @@ function showFeedback(targetBtn, type) {
 
 // ── Main Render ──────────────────────────────────────────────
 
+// biome-ignore lint/correctness/noUnusedVariables: global entry point called by content.js
 async function renderUI() {
 	try {
 		const itemId = extractItemId();
