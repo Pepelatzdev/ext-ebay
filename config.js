@@ -17,8 +17,6 @@ var ECA = {
 
 	// ── Security ──────────────────────────────────────────────
 	GEMINI_HOST: "gemini.google.com",
-	// Hosts allowed for background-proxied fetches (eBay description iframes).
-	DESC_FETCH_HOST_SUFFIXES: [".ebaydesc.com", ".ebay.com"],
 	// Hard cap on description fetch to keep the service worker from being
 	// killed mid-flight on slow networks.
 	DESC_FETCH_TIMEOUT_MS: 10000,

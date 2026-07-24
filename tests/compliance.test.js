@@ -61,3 +61,8 @@ it("documents current limits permissions and privacy URL", () => {
 	expect(readme).toContain("alarms");
 	expect(readme).toContain("privacy.html");
 });
+
+it("does not retain unused configuration entries", () => {
+	const config = readFileSync(resolve("config.js"), "utf8");
+	expect(config).not.toContain("DESC_FETCH_HOST_SUFFIXES");
+});
