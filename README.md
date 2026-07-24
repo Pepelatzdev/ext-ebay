@@ -100,21 +100,35 @@ npm ci
 npm test
 ```
 
-Тести виконуються через Vitest у середовищі jsdom і перевіряють DOM-екстрактори, форматування промпту, стани плаваючого UI та повторний Gemini-запит.
+Тести виконуються через Vitest у середовищі jsdom і перевіряють DOM-екстрактори, форматування промпту, стани плаваючого UI, повторний Gemini-запит, release-скрипти та взаємодію з Chrome Web Store API V2 без реальних мережевих запитів.
 
 ### Статичний аналіз і форматування
 
 ```bash
-npx biome check .
+npm run check
 ```
 
 ### Пакування
 
 ```bash
-node scripts/pack.js
+npm run verify:version
+npm run pack
+npm run verify:package
 ```
 
-Команда створює `extension.zip` для Chrome Web Store. Під час пакування з `manifest.json` видаляються локальні поля `key` та `update_url`, а тимчасова папка `dist/` очищається.
+`verify:version` звіряє версію у `manifest.json`, `package.json`, `package-lock.json` та бейджі `index.html`. `pack` створює production-архів `extension.zip` в ізольованій тимчасовій папці та завершується з помилкою, якщо архів не вдалося створити. `verify:package` перевіряє Manifest V3, обов'язкові файли й іконки та відсутність development-файлів у ZIP.
+
+Повний локальний набір перевірок перед комітом або релізом:
+
+```bash
+npm ci
+npm run check
+npm test
+npm audit --audit-level=high
+npm run verify:version
+npm run pack
+npm run verify:package
+```
 
 ## Архітектура
 
@@ -127,7 +141,10 @@ node scripts/pack.js
 - `background.js` — ініціалізація налаштувань, безпечне відкриття Gemini та завантаження описів eBay;
 - `options.html`, `options.js`, `options.css` — сторінка налаштувань;
 - `tests/` — тести Vitest;
-- `scripts/pack.js` — створення production ZIP.
+- `scripts/pack.js` — створення production ZIP;
+- `scripts/verify-package.js` — перевірка складу й manifest готового ZIP;
+- `scripts/verify-version.js` — контроль узгодженості версії проєкту та релізу;
+- `scripts/cws-publish.js` — OAuth, upload, polling і publish через Chrome Web Store API V2.
 
 ## Зберігання даних і безпека
 
@@ -140,15 +157,27 @@ node scripts/pack.js
 
 ## CI/CD
 
-На кожен push у `main` GitHub Actions:
+Автоматизація розділена на три незалежні workflow:
 
-1. використовує Node.js 22;
-2. створює `extension.zip` через `scripts/pack.js`;
-3. отримує OAuth2 access token;
-4. завантажує та публікує архів через Chrome Web Store API;
-5. публікує `index.html` у GitHub Pages.
+- `quality.yml` запускається для pull request і кожного push у `main`: встановлює залежності через `npm ci`, виконує Biome, тести, npm audit, перевірку версії, пакування та перевірку ZIP;
+- `pages.yml` незалежно публікує `index.html` у GitHub Pages після push у `main` або ручного запуску;
+- `release.yml` публікує розширення лише для тегів `v*` або після ручного запуску з указаною версією, повторюючи всі quality gates перед публікацією.
 
-Workflow потребує secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` і `CHROME_REFRESH_TOKEN`.
+Публікація у Chrome Web Store використовує API V2 та OAuth Refresh Token. Для environment `chrome-web-store` потрібно створити repository/environment secrets:
+
+- `CHROME_CLIENT_ID`;
+- `CHROME_CLIENT_SECRET`;
+- `CHROME_REFRESH_TOKEN`;
+- `CHROME_PUBLISHER_ID`;
+- `CHROME_EXTENSION_ID`.
+
+Одноразове налаштування репозиторію:
+
+1. У **Settings → Pages → Build and deployment → Source** виберіть **GitHub Actions**.
+2. У **Settings → Environments** створіть environment `chrome-web-store` і додайте до нього перелічені secrets.
+3. За потреби увімкніть required reviewers для `chrome-web-store`, щоб кожна публікація потребувала ручного підтвердження.
+
+Для релізу синхронізуйте версію в усіх файлах, виконайте повний локальний набір перевірок і створіть тег на кшталт `v1.0.3`. Звичайний push у `main` не публікує розширення у Chrome Web Store.
 
 ## Відомі обмеження
 
