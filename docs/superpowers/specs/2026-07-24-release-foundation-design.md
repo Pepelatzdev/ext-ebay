@@ -79,6 +79,7 @@ ZIP завантажується через V2 media upload endpoint. Якщо A
 
 - `manifest.json.version`;
 - `package.json.version`;
+- `package-lock.json.version` і `package-lock.json.packages[""].version`;
 - version badge в `index.html`;
 - Git tag без префікса `v` або manual input `version`.
 
@@ -129,4 +130,3 @@ Dev-залежності оновлюються так, щоб `npm audit --audi
 - package failure коректно повертає failure;
 - `manifest.key`, `update_url` і `scripts/generate-key.js` відсутні;
 - робоче дерево чисте, а README описує фактичний release flow.
-
