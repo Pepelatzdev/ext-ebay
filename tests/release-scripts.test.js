@@ -103,3 +103,68 @@ describe("production package", () => {
 		expect(existsSync(outputFile)).toBe(false);
 	});
 });
+
+describe("Chrome Web Store V2 publisher", () => {
+	it("refreshes OAuth, polls an async upload and publishes", async () => {
+		const { publishExtension } = require("../scripts/cws-publish.js");
+		const responses = [
+			{ access_token: "secret-token" },
+			{ uploadState: "IN_PROGRESS" },
+			{ lastAsyncUploadState: "SUCCEEDED" },
+			{ itemId: "extension-id", state: "PENDING_REVIEW" },
+		];
+		const fetchImpl = async () => ({
+			ok: true,
+			status: 200,
+			json: async () => responses.shift(),
+			text: async () => "",
+		});
+		const zipPath = join(
+			mkdtempSync(join(tmpdir(), "eca-cws-")),
+			"extension.zip",
+		);
+		writeFileSync(zipPath, "zip-bytes");
+		const result = await publishExtension({
+			env: {
+				CHROME_CLIENT_ID: "client",
+				CHROME_CLIENT_SECRET: "client-secret",
+				CHROME_REFRESH_TOKEN: "refresh",
+				CHROME_PUBLISHER_ID: "publisher",
+				CHROME_EXTENSION_ID: "extension-id",
+			},
+			fetchImpl,
+			sleep: async () => {},
+			zipPath,
+		});
+		expect(result.state).toBe("PENDING_REVIEW");
+	});
+
+	it("rejects a failed upload without publishing", async () => {
+		const { publishExtension } = require("../scripts/cws-publish.js");
+		const responses = [{ access_token: "token" }, { uploadState: "FAILED" }];
+		const fetchImpl = async () => ({
+			ok: true,
+			status: 200,
+			json: async () => responses.shift(),
+			text: async () => "",
+		});
+		const zipPath = join(
+			mkdtempSync(join(tmpdir(), "eca-cws-")),
+			"extension.zip",
+		);
+		writeFileSync(zipPath, "zip-bytes");
+		await expect(
+			publishExtension({
+				env: {
+					CHROME_CLIENT_ID: "client",
+					CHROME_CLIENT_SECRET: "secret",
+					CHROME_REFRESH_TOKEN: "refresh",
+					CHROME_PUBLISHER_ID: "publisher",
+					CHROME_EXTENSION_ID: "extension-id",
+				},
+				fetchImpl,
+				zipPath,
+			}),
+		).rejects.toThrow(/Upload failed/);
+	});
+});
