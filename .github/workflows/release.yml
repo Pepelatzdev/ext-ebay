@@ -1,62 +1,56 @@
-name: Package & Deploy Extension
+name: Publish Chrome Extension
 
 on:
   push:
-    branches:
-      - main
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, without the v prefix
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: chrome-web-store-release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: chrome-web-store
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
-
-      - name: Pack extension zip
-        run: node scripts/pack.js
-
-      - name: Get Chrome Web Store access token
-        id: token
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - name: Resolve release version
+        id: version
+        shell: bash
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
         run: |
-          TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
-            -d "client_id=${{ secrets.CHROME_CLIENT_ID }}&client_secret=${{ secrets.CHROME_CLIENT_SECRET }}&refresh_token=${{ secrets.CHROME_REFRESH_TOKEN }}&grant_type=refresh_token" \
-            | jq -r '.access_token')
-          echo "::add-mask::$TOKEN"
-          echo "value=$TOKEN" >> $GITHUB_OUTPUT
-
-      - name: Upload zip to Chrome Web Store
-        run: |
-          curl -s -X PUT \
-            -H "Authorization: Bearer ${{ steps.token.outputs.value }}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Type: application/zip" \
-            -T extension.zip \
-            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}" \
-            | tee /tmp/upload.json | jq .
-          jq -e '.uploadState | test("SUCCESS|IN_PROGRESS")' /tmp/upload.json
-
-      - name: Publish on Chrome Web Store
-        run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ steps.token.outputs.value }}" \
-            -H "x-goog-api-version: 2" \
-            -H "Content-Length: 0" \
-            "https://www.googleapis.com/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}/publish" \
-            | jq .
-
-      - name: Prepare landing page
-        run: mkdir -p build && cp index.html build/
-
-      - name: Deploy landing page to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build
-          branch: gh-pages
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            release_version="${GITHUB_REF_NAME#v}"
+          else
+            release_version="$MANUAL_VERSION"
+          fi
+          echo "value=$release_version" >> "$GITHUB_OUTPUT"
+      - run: npm run verify:version -- "${{ steps.version.outputs.value }}"
+      - run: npm run pack
+      - run: npm run verify:package
+      - name: Upload and publish through Chrome Web Store API V2
+        env:
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+        run: node scripts/cws-publish.js extension.zip
