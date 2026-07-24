@@ -1,78 +1,122 @@
-/* eBay Copy Assistant — Styles */
-
-/* ── Container ─────────────────────────────────────────────── */
+/* eBay Copy Assistant — Floating actions */
 
 .ebay-copy-container {
-	margin-top: 8px;
+	position: fixed;
+	right: max(20px, env(safe-area-inset-right));
+	bottom: max(20px, env(safe-area-inset-bottom));
+	z-index: 2147483647;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+	max-width: calc(100vw - 40px);
+	font-family: Arial, sans-serif;
 }
 
-/* ── Fallback: floating button (no eBay equivalent) ────────── */
-
-.ebay-copy--floating {
-	position: fixed;
-	bottom: 20px;
-	right: 20px;
-	width: 48px;
-	height: 48px;
-	border-radius: 50%;
-	border: none;
-	cursor: pointer;
-	z-index: 2147483647;
-	background: rgba(30, 30, 30, 0.85);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-	color: #fff;
-	display: flex;
+.ebay-copy-action {
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	box-sizing: border-box;
+	min-height: 48px;
+	padding: 11px 18px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font: inherit;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 24px;
+	text-decoration: none;
+	cursor: pointer;
+	box-shadow: 0 3px 14px rgba(0, 0, 0, 0.28);
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		transform 160ms ease;
+	appearance: none;
+	-webkit-appearance: none;
 }
 
-.ebay-copy--floating:hover {
-	background: rgba(50, 50, 50, 0.95);
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+.ebay-copy-action:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 5px 18px rgba(0, 0, 0, 0.34);
 }
 
-.ebay-copy--floating.ebay-copy--success {
-	background: rgba(34, 139, 34, 0.92) !important;
-}
-.ebay-copy--floating.ebay-copy--error {
-	background: rgba(200, 40, 40, 0.92) !important;
+.ebay-copy-action:active {
+	transform: translateY(0);
 }
 
-.ebay-copy--floating svg {
-	width: 20px;
-	height: 20px;
+.ebay-copy-action:focus-visible {
+	outline: 3px solid #3665f3;
+	outline-offset: 3px;
 }
 
-/* ── SVG icon sizes (eBay has no rules for our custom icons) ── */
+.ebay-copy-action--primary {
+	background-color: #191919;
+	color: #fff;
+}
 
-.ebay-copy-btn svg {
-	width: 16px;
-	height: 16px;
-	margin-right: 8px;
-	vertical-align: middle;
+.ebay-copy-action--primary:hover {
+	background-color: #333;
+}
+
+.ebay-copy-action--secondary {
+	min-height: 36px;
+	padding: 5px 13px;
+	background-color: rgba(255, 255, 255, 0.96);
+	border-color: #767676;
+	color: #191919;
+	font-size: 14px;
+	line-height: 24px;
+}
+
+.ebay-copy-action--secondary:hover {
+	background-color: #f7f7f7;
+}
+
+.ebay-copy-action.ebay-copy--success {
+	background-color: #228b22;
+	border-color: #228b22;
+	color: #fff;
+}
+
+.ebay-copy-action.ebay-copy--error {
+	background-color: #c82828;
+	border-color: #c82828;
+	color: #fff;
+}
+
+.ebay-copy-action__content {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	white-space: nowrap;
+}
+
+.ebay-copy-action svg {
+	width: 18px;
+	height: 18px;
 	flex-shrink: 0;
 }
 
-.ebay-copy-icon--sparkle,
-.ebay-copy-icon--report {
-	width: 18px;
-	height: 18px;
-	vertical-align: middle;
-}
+@media (max-width: 480px) {
+	.ebay-copy-container {
+		right: max(12px, env(safe-area-inset-right));
+		bottom: max(12px, env(safe-area-inset-bottom));
+		max-width: calc(100vw - 24px);
+	}
 
-/* ── Report Ready Card: layout only ────────────────────────── */
+	.ebay-copy-action {
+		min-height: 44px;
+		padding: 9px 15px;
+		font-size: 15px;
+	}
 
-.ebay-copy-report-box__header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 12px;
-}
-
-.ebay-copy-report-box__title {
-	display: flex;
-	align-items: center;
-	gap: 6px;
+	.ebay-copy-action--secondary {
+		min-height: 34px;
+		padding: 4px 12px;
+		font-size: 13px;
+	}
 }
