@@ -122,7 +122,7 @@ describe("floating Gemini actions", () => {
 		expect(container?.querySelector("a")).toBeNull();
 	});
 
-	it("clears the saved report and starts a new Gemini request", async () => {
+	it("preserves the saved report while starting a new Gemini request", async () => {
 		globalThis.chrome = createChrome({
 			chat_123456789012: "https://gemini.google.com/gem/example/chat-example",
 			chatHistoryOrder: ["older-item", "123456789012"],
@@ -137,23 +137,40 @@ describe("floating Gemini actions", () => {
 		document.getElementById("ebay-gemini-reset-btn").click();
 
 		await vi.waitFor(() => {
-			expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-				type: "OPEN_GEMINI_TAB",
-				url: "https://gemini.google.com/gem/cb9c9074ac8d",
-			});
+			expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "START_GEMINI_REQUEST",
+					itemId: "123456789012",
+					prompt: expect.stringContaining("Vintage Camera"),
+				}),
+			);
 		});
-		expect(chrome.storage.sync.remove).toHaveBeenCalledWith([
-			"chat_123456789012",
-		]);
-		expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-			chatHistoryOrder: ["older-item"],
-		});
+		expect(chrome.storage.sync.remove).not.toHaveBeenCalled();
+		expect(
+			document.querySelector('a[href*="gemini.google.com"]'),
+		).not.toBeNull();
 		expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
-		expect(chrome.storage.local.set).toHaveBeenCalledWith(
-			expect.objectContaining({
-				activePromptItemId: "123456789012",
-				pendingPrompt: expect.stringContaining("Vintage Camera"),
-			}),
-		);
+		expect(chrome.storage.local.set).not.toHaveBeenCalled();
+	});
+
+	it("exposes and restores the busy state", async () => {
+		vi.useFakeTimers();
+		try {
+			const { renderUI } = loadUi();
+			await renderUI();
+			const button = document.getElementById("ebay-copy-assistant-btn");
+			button.click();
+			expect(button.disabled).toBe(true);
+			expect(button.getAttribute("aria-busy")).toBe("true");
+
+			for (let index = 0; index < 10; index++) await Promise.resolve();
+			await vi.advanceTimersByTimeAsync(2_000);
+
+			expect(button.disabled).toBe(false);
+			expect(button.getAttribute("aria-disabled")).toBe("false");
+			expect(button.getAttribute("aria-busy")).toBe("false");
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

@@ -47,6 +47,11 @@
 	transform: translateY(0);
 }
 
+.ebay-copy-action:disabled {
+	cursor: wait;
+	opacity: 0.78;
+}
+
 .ebay-copy-action:focus-visible {
 	outline: 3px solid #3665f3;
 	outline-offset: 3px;

@@ -31,6 +31,12 @@ function btnHTML(icon, label) {
 	return `<span class="ebay-copy-action__content">${icon}<span class="ebay-copy-action__text">${label}</span></span>`;
 }
 
+function setBusy(button, busy) {
+	button.disabled = busy;
+	button.setAttribute("aria-disabled", String(busy));
+	button.setAttribute("aria-busy", String(busy));
+}
+
 function showFeedback(targetBtn, type) {
 	if (feedbackTimer) clearTimeout(feedbackTimer);
 	if (!targetBtn) return;
@@ -38,12 +44,11 @@ function showFeedback(targetBtn, type) {
 	const originalHTML = targetBtn.innerHTML;
 	targetBtn.innerHTML = btnHTML(SVG[type], ECA.FEEDBACK_LABEL[type]);
 	targetBtn.classList.add(`ebay-copy--${type}`);
-	targetBtn.style.pointerEvents = "none";
 
 	feedbackTimer = setTimeout(() => {
 		targetBtn.innerHTML = originalHTML;
 		targetBtn.classList.remove(`ebay-copy--${type}`);
-		targetBtn.style.pointerEvents = "";
+		setBusy(targetBtn, false);
 		feedbackTimer = null;
 	}, ECA.FEEDBACK_DELAY[type]);
 }
@@ -101,6 +106,7 @@ function renderReportReady(container, chatUrl, itemId) {
 	resetBtn.id = ECA.RESET_BTN_ID;
 	resetBtn.type = "button";
 	resetBtn.className = "ebay-copy-action ebay-copy-action--secondary";
+	resetBtn.setAttribute("aria-live", "polite");
 	resetBtn.innerHTML = btnHTML(SVG.sparkle, "Ask again");
 
 	const link = document.createElement("a");
@@ -122,35 +128,15 @@ function renderAskButton(container, itemId) {
 	btn.type = "button";
 	btn.title = "Ask Gemini";
 	btn.className = "ebay-copy-action ebay-copy-action--primary";
+	btn.setAttribute("aria-live", "polite");
 	btn.innerHTML = btnHTML(SVG.sparkle, "Ask Gemini");
 
 	container.replaceChildren(btn);
 	btn.addEventListener("click", handleAskGemini(btn, itemId));
 }
 
-async function clearSavedReport(itemId) {
-	await chrome.storage.sync.remove([`chat_${itemId}`]);
-	const syncData = await chrome.storage.sync.get(["chatHistoryOrder"]);
-	const order = (syncData.chatHistoryOrder || []).filter(
-		(savedItemId) => savedItemId !== itemId,
-	);
-	await chrome.storage.sync.set({ chatHistoryOrder: order });
-}
-
 function handleAskAgain(btn, itemId) {
-	return async () => {
-		btn.style.pointerEvents = "none";
-		try {
-			await clearSavedReport(itemId);
-			await requestGemini(btn, itemId);
-		} catch (error) {
-			console.error(
-				"eBay Copy Assistant: Failed to replace saved report",
-				error,
-			);
-			showFeedback(btn, "error");
-		}
-	};
+	return () => requestGemini(btn, itemId);
 }
 
 function handleAskGemini(btn, itemId) {
@@ -158,7 +144,7 @@ function handleAskGemini(btn, itemId) {
 }
 
 async function requestGemini(btn, itemId) {
-	btn.style.pointerEvents = "none";
+	setBusy(btn, true);
 	try {
 		const data = {
 			title: extractTitle(),
@@ -178,20 +164,24 @@ async function requestGemini(btn, itemId) {
 		});
 
 		const promptText = formatPrompt(preamble, data);
-		await navigator.clipboard.writeText(promptText);
-		await chrome.storage.local.set({
-			pendingPrompt: promptText,
-			activePromptItemId: itemId,
-			pendingPromptAt: Date.now(),
-		});
+		try {
+			await navigator.clipboard.writeText(promptText);
+		} catch (error) {
+			console.warn(
+				"eBay Copy Assistant: Clipboard fallback unavailable",
+				error,
+			);
+		}
 
 		const response = await chrome.runtime.sendMessage({
-			type: "OPEN_GEMINI_TAB",
+			type: ECA.MESSAGE.START,
+			itemId,
+			prompt: promptText,
 			url: geminiUrl || ECA.DEFAULT_GEMINI_URL,
 		});
 
-		if (response?.success === false) {
-			throw new Error(response.error || "Failed to open Gemini tab");
+		if (!response?.success) {
+			throw new Error(response?.error || "Failed to open Gemini");
 		}
 
 		showFeedback(btn, "success");
