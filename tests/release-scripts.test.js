@@ -94,6 +94,7 @@ describe("production package", () => {
 		]);
 		expect(PRODUCTION_FILES).toEqual(
 			expect.arrayContaining([
+				"message-validation.js",
 				"request-store.js",
 				"report-store.js",
 				"gemini-editor.js",

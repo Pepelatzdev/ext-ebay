@@ -5,6 +5,7 @@ const { execFileSync } = require("node:child_process");
 
 const PRODUCTION_FILES = [
 	"background.js",
+	"message-validation.js",
 	"request-store.js",
 	"report-store.js",
 	"config.js",
