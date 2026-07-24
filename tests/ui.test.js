@@ -187,4 +187,17 @@ describe("floating Gemini actions", () => {
 		expect(contentCss).toContain("prefers-reduced-motion: reduce");
 		expect(contentCss).toContain(".ebay-copy-action:disabled");
 	});
+
+	it("defines scoped high-contrast action colors and protected link states", () => {
+		expect(contentCss).toContain("--eca-primary-background: #3665f3");
+		expect(contentCss).toContain("--eca-primary-hover-background: #234fc7");
+		expect(contentCss).toContain("--eca-primary-foreground: #fff");
+		expect(contentCss).toContain("--eca-secondary-background: #fff");
+		expect(contentCss).toContain("--eca-secondary-foreground: #191919");
+		expect(contentCss).toContain("--eca-secondary-border: #191919");
+		expect(contentCss).toContain(".ebay-copy-action--primary:link");
+		expect(contentCss).toContain(".ebay-copy-action--primary:visited");
+		expect(contentCss).toContain("color: var(--eca-primary-foreground)");
+		expect(contentCss).not.toContain(":root");
+	});
 });

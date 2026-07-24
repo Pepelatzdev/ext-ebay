@@ -1,6 +1,14 @@
 /* eBay Copy Assistant — Floating actions */
 
 .ebay-copy-container {
+	--eca-primary-background: #3665f3;
+	--eca-primary-hover-background: #234fc7;
+	--eca-primary-foreground: #fff;
+	--eca-secondary-background: #fff;
+	--eca-secondary-hover-background: #f7f7f7;
+	--eca-secondary-foreground: #191919;
+	--eca-secondary-border: #191919;
+
 	position: fixed;
 	right: max(20px, env(safe-area-inset-right));
 	bottom: max(20px, env(safe-area-inset-bottom));
@@ -57,27 +65,31 @@
 	outline-offset: 3px;
 }
 
-.ebay-copy-action--primary {
-	background-color: #191919;
-	color: #fff;
+.ebay-copy-action--primary,
+.ebay-copy-action--primary:link,
+.ebay-copy-action--primary:visited {
+	background-color: var(--eca-primary-background);
+	border-color: var(--eca-primary-background);
+	color: var(--eca-primary-foreground);
 }
 
 .ebay-copy-action--primary:hover {
-	background-color: #333;
+	background-color: var(--eca-primary-hover-background);
+	border-color: var(--eca-primary-hover-background);
 }
 
 .ebay-copy-action--secondary {
 	min-height: 36px;
 	padding: 5px 13px;
-	background-color: rgba(255, 255, 255, 0.96);
-	border-color: #767676;
-	color: #191919;
+	background-color: var(--eca-secondary-background);
+	border-color: var(--eca-secondary-border);
+	color: var(--eca-secondary-foreground);
 	font-size: 14px;
 	line-height: 24px;
 }
 
 .ebay-copy-action--secondary:hover {
-	background-color: #f7f7f7;
+	background-color: var(--eca-secondary-hover-background);
 }
 
 .ebay-copy-action.ebay-copy--success {
