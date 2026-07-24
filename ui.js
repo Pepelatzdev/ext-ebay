@@ -28,24 +28,20 @@ const SVG = {
 let feedbackTimer = null;
 
 function btnHTML(icon, label) {
-	return `<span class="ux-call-to-action__cell-with-icon">${icon}<span class="ux-call-to-action__text">${label}</span></span>`;
+	return `<span class="ebay-copy-action__content">${icon}<span class="ebay-copy-action__text">${label}</span></span>`;
 }
 
 function showFeedback(targetBtn, type) {
 	if (feedbackTimer) clearTimeout(feedbackTimer);
 	if (!targetBtn) return;
-	const isFloating = targetBtn.classList.contains(ECA.FLOATING_CLASS);
 
-	targetBtn.innerHTML = isFloating
-		? SVG[type]
-		: btnHTML(SVG[type], ECA.FEEDBACK_LABEL[type]);
+	const originalHTML = targetBtn.innerHTML;
+	targetBtn.innerHTML = btnHTML(SVG[type], ECA.FEEDBACK_LABEL[type]);
 	targetBtn.classList.add(`ebay-copy--${type}`);
 	targetBtn.style.pointerEvents = "none";
 
 	feedbackTimer = setTimeout(() => {
-		targetBtn.innerHTML = isFloating
-			? SVG.sparkle
-			: btnHTML(SVG.sparkle, "Ask Gemini");
+		targetBtn.innerHTML = originalHTML;
 		targetBtn.classList.remove(`ebay-copy--${type}`);
 		targetBtn.style.pointerEvents = "";
 		feedbackTimer = null;
@@ -59,38 +55,29 @@ async function renderUI() {
 		const itemId = extractItemId();
 		if (!itemId) return;
 
-		// Remove existing container if any
-		const existingContainer = document.getElementById(ECA.CONTAINER_ID);
-		if (existingContainer) {
-			existingContainer.remove();
-		}
+		document.getElementById(ECA.CONTAINER_ID)?.remove();
 
 		const container = document.createElement("div");
 		container.id = ECA.CONTAINER_ID;
 		container.className = "ebay-copy-container";
 
-		const result = await chrome.storage.sync.get([`chat_${itemId}`]);
-		const chatUrl = result[`chat_${itemId}`];
+		const key = `chat_${itemId}`;
+		const result = await chrome.storage.sync.get([key]);
+		const chatUrl = result[key];
 
-		const S = ECA.SELECTORS;
-		const watchContainer =
-			document.querySelector(S.watchContainer) ||
-			document
-				.querySelector(S.watchButton)
-				?.closest(".add-to-watch-list, .x-watchheart");
-
-		if (chatUrl) {
-			renderReportReady(container, chatUrl, itemId, watchContainer);
+		if (chatUrl && isSafeGeminiUrl(chatUrl)) {
+			renderReportReady(container, chatUrl, itemId);
 		} else {
-			renderAskButton(container, itemId, watchContainer);
+			renderAskButton(container, itemId);
 		}
+
+		document.body.appendChild(container);
 	} catch (e) {
 		if (e.message?.includes("Extension context invalidated")) {
 			console.log(
 				"eBay Copy Assistant: Extension context invalidated. Page reload required.",
 			);
-			const el = document.getElementById(ECA.CONTAINER_ID);
-			if (el) el.remove();
+			document.getElementById(ECA.CONTAINER_ID)?.remove();
 		} else {
 			console.error("eBay Copy Assistant: Error rendering UI", e);
 		}
@@ -108,87 +95,52 @@ function isSafeGeminiUrl(rawUrl) {
 	}
 }
 
-function renderReportReady(container, chatUrl, itemId, watchContainer) {
-	// Defense-in-depth: never render a URL that wasn't written by our own
-	// gemini-content.js running on gemini.google.com.
-	if (!isSafeGeminiUrl(chatUrl)) {
-		renderAskButton(container, itemId, watchContainer);
-		return;
-	}
-
-	const header = document.createElement("div");
-	header.className = "ebay-copy-report-box__header";
-
-	const title = document.createElement("div");
-	title.className = "ebay-copy-report-box__title";
-	// SVG.report is a static string literal — safe to set as innerHTML.
-	title.innerHTML = SVG.report;
-	const titleText = document.createElement("span");
-	titleText.className = "ux-textspans ux-textspans--BOLD";
-	titleText.textContent = "Gemini Report Ready";
-	title.appendChild(titleText);
-
+function renderReportReady(container, chatUrl, itemId) {
 	const resetBtn = document.createElement("button");
 	resetBtn.id = ECA.RESET_BTN_ID;
 	resetBtn.type = "button";
-	resetBtn.className = "fake-link";
-	resetBtn.textContent = "Ask again";
-
-	header.append(title, resetBtn);
+	resetBtn.className = "ebay-copy-action ebay-copy-action--secondary";
+	resetBtn.innerHTML = btnHTML(SVG.sparkle, "Ask again");
 
 	const link = document.createElement("a");
-	link.className =
-		"ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--primary";
+	link.className = "ebay-copy-action ebay-copy-action--primary";
 	link.target = "_blank";
 	link.rel = "noopener noreferrer";
 	link.href = chatUrl;
-	link.textContent = "View Report";
+	link.innerHTML = btnHTML(SVG.report, "Show report");
 
-	container.replaceChildren(header, link);
-
-	insertAfterWatch(container, watchContainer);
-
-	resetBtn.addEventListener("click", async () => {
-		try {
-			await chrome.storage.sync.remove([`chat_${itemId}`]);
-
-			// Clean up the item from the FIFO order array
-			const syncData = await chrome.storage.sync.get(["chatHistoryOrder"]);
-			const order = (syncData.chatHistoryOrder || []).filter(
-				(id) => id !== itemId,
-			);
-			await chrome.storage.sync.set({ chatHistoryOrder: order });
-		} catch (e) {
-			console.error("eBay Copy Assistant: Failed to reset chat link", e);
-		}
-
-		renderUI();
-	});
+	container.replaceChildren(resetBtn, link);
+	resetBtn.addEventListener("click", handleAskAgain(resetBtn, itemId));
 }
 
 // ── Ask Gemini Button ────────────────────────────────────────
 
-function renderAskButton(container, itemId, watchContainer) {
+function renderAskButton(container, itemId) {
 	const btn = document.createElement("button");
 	btn.id = ECA.BTN_ID;
 	btn.type = "button";
 	btn.title = "Ask Gemini";
+	btn.className = "ebay-copy-action ebay-copy-action--primary";
+	btn.innerHTML = btnHTML(SVG.sparkle, "Ask Gemini");
 
-	if (watchContainer?.parentNode) {
-		btn.className =
-			"ux-call-to-action fake-btn fake-btn--fluid fake-btn--large fake-btn--secondary ebay-copy-btn";
-		btn.innerHTML = btnHTML(SVG.sparkle, "Ask Gemini");
-		container.appendChild(btn);
-		insertAfterWatch(container, watchContainer);
-	} else {
-		// Fallback: floating button
-		btn.className = ECA.FLOATING_CLASS;
-		btn.innerHTML = SVG.sparkle;
-		container.appendChild(btn);
-		document.body.appendChild(container);
-	}
-
+	container.replaceChildren(btn);
 	btn.addEventListener("click", handleAskGemini(btn, itemId));
+}
+
+async function clearSavedReport(itemId) {
+	await chrome.storage.sync.remove([`chat_${itemId}`]);
+	const syncData = await chrome.storage.sync.get(["chatHistoryOrder"]);
+	const order = (syncData.chatHistoryOrder || []).filter(
+		(savedItemId) => savedItemId !== itemId,
+	);
+	await chrome.storage.sync.set({ chatHistoryOrder: order });
+}
+
+function handleAskAgain(_btn, itemId) {
+	return async () => {
+		await clearSavedReport(itemId);
+		renderUI();
+	};
 }
 
 function handleAskGemini(btn, itemId) {
@@ -239,17 +191,4 @@ function handleAskGemini(btn, itemId) {
 			showFeedback(btn, "error");
 		}
 	};
-}
-
-// ── DOM Insertion Helper ─────────────────────────────────────
-
-function insertAfterWatch(container, watchContainer) {
-	if (watchContainer?.parentNode) {
-		watchContainer.parentNode.insertBefore(
-			container,
-			watchContainer.nextSibling,
-		);
-	} else {
-		document.body.appendChild(container);
-	}
 }
