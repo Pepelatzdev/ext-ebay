@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -64,6 +70,14 @@ describe("verify-version", () => {
 });
 
 describe("production package", () => {
+	it("keeps obsolete identity fields out of the source manifest", () => {
+		const manifest = JSON.parse(
+			readFileSync(join(import.meta.dirname, "../manifest.json"), "utf8"),
+		);
+		expect(manifest).not.toHaveProperty("key");
+		expect(manifest).not.toHaveProperty("update_url");
+	});
+
 	it("packs and verifies the real extension in a temporary location", () => {
 		const { packExtension } = require("../scripts/pack.js");
 		const { verifyPackage } = require("../scripts/verify-package.js");
