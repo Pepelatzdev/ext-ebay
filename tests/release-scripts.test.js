@@ -78,6 +78,29 @@ describe("production package", () => {
 		expect(manifest).not.toHaveProperty("update_url");
 	});
 
+	it("wires every reliable request module into the manifest and package", () => {
+		const manifest = JSON.parse(
+			readFileSync(join(import.meta.dirname, "../manifest.json"), "utf8"),
+		);
+		const geminiScripts = manifest.content_scripts.find((entry) =>
+			entry.matches.includes("https://gemini.google.com/*"),
+		);
+		const { PRODUCTION_FILES } = require("../scripts/pack.js");
+		expect(manifest.permissions).toContain("alarms");
+		expect(geminiScripts.js).toEqual([
+			"config.js",
+			"gemini-editor.js",
+			"gemini-content.js",
+		]);
+		expect(PRODUCTION_FILES).toEqual(
+			expect.arrayContaining([
+				"request-store.js",
+				"report-store.js",
+				"gemini-editor.js",
+			]),
+		);
+	});
+
 	it("packs and verifies the real extension in a temporary location", () => {
 		const { packExtension } = require("../scripts/pack.js");
 		const { verifyPackage } = require("../scripts/verify-package.js");

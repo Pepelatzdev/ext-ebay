@@ -5,10 +5,13 @@ const { execFileSync } = require("node:child_process");
 
 const PRODUCTION_FILES = [
 	"background.js",
+	"request-store.js",
+	"report-store.js",
 	"config.js",
 	"extractors.js",
 	"ui.js",
 	"content.js",
+	"gemini-editor.js",
 	"gemini-content.js",
 	"options.html",
 	"options.css",

@@ -3,7 +3,7 @@
 	"name": "eBay Copy Assistant",
 	"version": "1.0.2",
 	"description": "One-click copy of eBay product details as a prompt-ready text for chatbot consultation.",
-	"permissions": ["storage"],
+	"permissions": ["storage", "alarms"],
 	"host_permissions": [
 		"*://*.ebaydesc.com/*",
 		"*://*.ebay.com/*",
@@ -33,7 +33,7 @@
 		},
 		{
 			"matches": ["https://gemini.google.com/*"],
-			"js": ["gemini-content.js"],
+			"js": ["config.js", "gemini-editor.js", "gemini-content.js"],
 			"run_at": "document_idle"
 		}
 	],
