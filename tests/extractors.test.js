@@ -492,3 +492,47 @@ describe("Gemini request limits", () => {
 		expect(ECA.MESSAGE.START).toBe("START_GEMINI_REQUEST");
 	});
 });
+
+describe("bounded prompt formatting", () => {
+	it("normalizes spaces and repeated blank lines", () => {
+		expect(
+			normalizePromptText("  First\u00a0 line  \n\n\n  Second   line "),
+		).toBe("First line\n\nSecond line");
+	});
+
+	it("limits description and adds the required marker", () => {
+		const data = {
+			title: "Item",
+			type: "Buy It Now",
+			bidPrice: "",
+			binPrice: "",
+			shipping: "",
+			condition: "",
+			returns: "",
+			seller: { name: "", feedback: "" },
+			reviews: [],
+			specs: [],
+			description: "x".repeat(100_001),
+		};
+		const prompt = formatPrompt("Analyze", data);
+		expect(prompt.length).toBeLessThanOrEqual(120_000);
+		expect(prompt).toContain("[Description truncated]");
+	});
+
+	it("never exceeds the full prompt limit", () => {
+		const data = {
+			title: "x".repeat(130_000),
+			type: "Buy It Now",
+			bidPrice: "",
+			binPrice: "",
+			shipping: "",
+			condition: "",
+			returns: "",
+			seller: { name: "", feedback: "" },
+			reviews: [],
+			specs: [],
+			description: "description",
+		};
+		expect(formatPrompt("Analyze", data).length).toBeLessThanOrEqual(120_000);
+	});
+});
