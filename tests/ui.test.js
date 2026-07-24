@@ -111,4 +111,40 @@ describe("floating Gemini actions", () => {
 		expect(container?.textContent).toContain("Ask Gemini");
 		expect(container?.querySelector("a")).toBeNull();
 	});
+
+	it("clears the saved report and starts a new Gemini request", async () => {
+		globalThis.chrome = createChrome({
+			chat_123456789012:
+				"https://gemini.google.com/gem/example/chat-example",
+			chatHistoryOrder: ["older-item", "123456789012"],
+		});
+		document.body.innerHTML =
+			'<h1 itemprop="name">Vintage Camera</h1>' +
+			'<div class="x-price-primary">' +
+			'<span class="ux-textspans">US $99.99</span></div>';
+		const { renderUI } = loadUi();
+		await renderUI();
+
+		document.getElementById("ebay-gemini-reset-btn").click();
+
+		await vi.waitFor(() => {
+			expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+				type: "OPEN_GEMINI_TAB",
+				url: "https://gemini.google.com/gem/cb9c9074ac8d",
+			});
+		});
+		expect(chrome.storage.sync.remove).toHaveBeenCalledWith([
+			"chat_123456789012",
+		]);
+		expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+			chatHistoryOrder: ["older-item"],
+		});
+		expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
+		expect(chrome.storage.local.set).toHaveBeenCalledWith(
+			expect.objectContaining({
+				activePromptItemId: "123456789012",
+				pendingPrompt: expect.stringContaining("Vintage Camera"),
+			}),
+		);
+	});
 });

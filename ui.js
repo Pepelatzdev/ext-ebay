@@ -136,59 +136,66 @@ async function clearSavedReport(itemId) {
 	await chrome.storage.sync.set({ chatHistoryOrder: order });
 }
 
-function handleAskAgain(_btn, itemId) {
+function handleAskAgain(btn, itemId) {
 	return async () => {
-		await clearSavedReport(itemId);
-		renderUI();
+		btn.style.pointerEvents = "none";
+		try {
+			await clearSavedReport(itemId);
+			await requestGemini(btn, itemId);
+		} catch (error) {
+			console.error(
+				"eBay Copy Assistant: Failed to replace saved report",
+				error,
+			);
+			showFeedback(btn, "error");
+		}
 	};
 }
 
 function handleAskGemini(btn, itemId) {
-	return async () => {
-		btn.style.pointerEvents = "none";
-		try {
-			const data = {
-				title: extractTitle(),
-				...extractAuctionData(),
-				condition: extractCondition(),
-				specs: extractItemSpecifics(),
-				shipping: extractShipping(),
-				returns: extractReturns(),
-				seller: extractSellerInfo(),
-				reviews: extractSellerReviews(),
-				description: await extractDescription(),
-			};
+	return () => requestGemini(btn, itemId);
+}
 
-			const { preamble, geminiUrl } = await chrome.storage.sync.get({
-				preamble: ECA.DEFAULT_PREAMBLE,
-				geminiUrl: ECA.DEFAULT_GEMINI_URL,
-			});
+async function requestGemini(btn, itemId) {
+	btn.style.pointerEvents = "none";
+	try {
+		const data = {
+			title: extractTitle(),
+			...extractAuctionData(),
+			condition: extractCondition(),
+			specs: extractItemSpecifics(),
+			shipping: extractShipping(),
+			returns: extractReturns(),
+			seller: extractSellerInfo(),
+			reviews: extractSellerReviews(),
+			description: await extractDescription(),
+		};
 
-			const promptText = formatPrompt(preamble, data);
-			await navigator.clipboard.writeText(promptText);
-			await chrome.storage.local.set({
-				pendingPrompt: promptText,
-				activePromptItemId: itemId,
-				pendingPromptAt: Date.now(),
-			});
+		const { preamble, geminiUrl } = await chrome.storage.sync.get({
+			preamble: ECA.DEFAULT_PREAMBLE,
+			geminiUrl: ECA.DEFAULT_GEMINI_URL,
+		});
 
-			const resp = await chrome.runtime.sendMessage({
-				type: "OPEN_GEMINI_TAB",
-				url: geminiUrl || ECA.DEFAULT_GEMINI_URL,
-			});
+		const promptText = formatPrompt(preamble, data);
+		await navigator.clipboard.writeText(promptText);
+		await chrome.storage.local.set({
+			pendingPrompt: promptText,
+			activePromptItemId: itemId,
+			pendingPromptAt: Date.now(),
+		});
 
-			if (resp && resp.success === false) {
-				console.error(
-					"eBay Copy Assistant: Failed to open Gemini tab",
-					resp.error,
-				);
-				showFeedback(btn, "error");
-			} else {
-				showFeedback(btn, "success");
-			}
-		} catch (err) {
-			console.error("eBay Copy Assistant: Failed to copy", err);
-			showFeedback(btn, "error");
+		const response = await chrome.runtime.sendMessage({
+			type: "OPEN_GEMINI_TAB",
+			url: geminiUrl || ECA.DEFAULT_GEMINI_URL,
+		});
+
+		if (response?.success === false) {
+			throw new Error(response.error || "Failed to open Gemini tab");
 		}
-	};
+
+		showFeedback(btn, "success");
+	} catch (error) {
+		console.error("eBay Copy Assistant: Failed to ask Gemini", error);
+		showFeedback(btn, "error");
+	}
 }
