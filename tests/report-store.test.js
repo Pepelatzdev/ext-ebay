@@ -85,4 +85,37 @@ describe("quota-aware report store", () => {
 		await store.save("new", "https://gemini.google.com/app/new");
 		expect(chrome.storage.sync.set).toHaveBeenCalledTimes(2);
 	});
+
+	it("serializes simultaneous saves against the latest history", async () => {
+		const initial = { chatHistoryOrder: [] };
+		for (let index = 0; index < 200; index++) {
+			initial.chatHistoryOrder.push(String(index));
+			initial[`chat_${index}`] = `https://gemini.google.com/app/${index}`;
+		}
+		const { data, store } = createStore(initial);
+
+		await Promise.all([
+			store.save("new-a", "https://gemini.google.com/app/new-a"),
+			store.save("new-b", "https://gemini.google.com/app/new-b"),
+		]);
+
+		expect(data.chatHistoryOrder).toHaveLength(200);
+		expect(data.chatHistoryOrder.slice(-2)).toEqual(["new-a", "new-b"]);
+		expect(data["chat_new-a"]).toBeTruthy();
+		expect(data["chat_new-b"]).toBeTruthy();
+		expect(data.chat_0).toBeUndefined();
+		expect(data.chat_1).toBeUndefined();
+	});
+
+	it("continues the save queue after one operation fails", async () => {
+		const { chrome, data, store } = createStore({ chatHistoryOrder: [] });
+		chrome.storage.sync.set.mockRejectedValueOnce(new Error("write failed"));
+
+		await expect(
+			store.save("failed", "https://gemini.google.com/app/failed"),
+		).rejects.toThrow("write failed");
+		await store.save("next", "https://gemini.google.com/app/next");
+
+		expect(data.chat_next).toBe("https://gemini.google.com/app/next");
+	});
 });

@@ -68,7 +68,9 @@ var ECAReportStore = (() => {
 		});
 	}
 
-	async function save(itemId, chatUrl) {
+	let saveQueue = Promise.resolve();
+
+	async function performSave(itemId, chatUrl) {
 		const original = await chrome.storage.sync.get(null);
 		let prepared = prepare(original, itemId, chatUrl);
 		try {
@@ -82,6 +84,12 @@ var ECAReportStore = (() => {
 		if (used > TARGET_BYTES) {
 			throw new Error(`Sync storage remains above target: ${used}`);
 		}
+	}
+
+	function save(itemId, chatUrl) {
+		const operation = saveQueue.then(() => performSave(itemId, chatUrl));
+		saveQueue = operation.catch(() => {});
+		return operation;
 	}
 
 	return {
