@@ -19,7 +19,18 @@ var ECARequestStore = (() => {
 	}
 
 	async function get(tabId) {
-		return (await chrome.storage.session.get(key(tabId)))[key(tabId)];
+		const request = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
+		if (!request) return undefined;
+		const age = Date.now() - request.createdAt;
+		if (
+			!Number.isFinite(request.createdAt) ||
+			age < 0 ||
+			age >= ECA.PENDING_PROMPT_TTL_MS
+		) {
+			await remove(tabId);
+			return undefined;
+		}
+		return request;
 	}
 
 	async function markInserted(tabId) {

@@ -32,7 +32,7 @@ describe("request store", () => {
 			itemId: "123",
 			prompt: "Prompt",
 			targetUrl: "https://gemini.google.com/gem/example",
-			createdAt: 1000,
+			createdAt: Date.now(),
 		});
 		expect(await store.get(42)).toMatchObject({
 			state: "pending",
@@ -47,13 +47,13 @@ describe("request store", () => {
 			itemId: "123",
 			prompt: "Prompt",
 			targetUrl: "https://gemini.google.com/gem/example",
-			createdAt: 1000,
+			createdAt: Date.now(),
 		});
 		await store.markInserted(42);
 		expect(await store.get(42)).toEqual({
 			itemId: "123",
 			targetUrl: "https://gemini.google.com/gem/example",
-			createdAt: 1000,
+			createdAt: expect.any(Number),
 			state: "waiting_for_chat",
 		});
 	});
@@ -63,10 +63,40 @@ describe("request store", () => {
 		await store.create(42, {
 			itemId: "123",
 			prompt: "Prompt",
-			createdAt: 1000,
+			createdAt: Date.now(),
 		});
 		await store.remove(42);
 		expect(await store.get(42)).toBeUndefined();
 		expect(chrome.alarms.clear).toHaveBeenCalledWith("eca-request:42");
 	});
+
+	it("removes and rejects an expired request during get", async () => {
+		const { chrome, store } = createStore();
+		await store.create(42, {
+			itemId: "123",
+			prompt: "Prompt",
+			targetUrl: "https://gemini.google.com/gem/example",
+			createdAt: Date.now() - 300_000,
+		});
+		expect(await store.get(42)).toBeUndefined();
+		expect(chrome.storage.session.remove).toHaveBeenCalledWith(
+			"geminiRequest:42",
+		);
+		expect(chrome.alarms.clear).toHaveBeenCalledWith("eca-request:42");
+	});
+
+	it.each([undefined, "invalid", Number.NaN])(
+		"removes a request with invalid createdAt %s",
+		async (createdAt) => {
+			const { data, store } = createStore();
+			data["geminiRequest:42"] = {
+				itemId: "123",
+				prompt: "Prompt",
+				targetUrl: "https://gemini.google.com/gem/example",
+				createdAt,
+				state: "pending",
+			};
+			expect(await store.get(42)).toBeUndefined();
+		},
+	);
 });
