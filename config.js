@@ -58,13 +58,15 @@ var ECA = {
 		],
 		pricePrimary: [
 			"div.x-price-primary > span.ux-textspans",
+			'[data-testid="x-price-primary"] .ux-textspans',
 			'[itemprop="price"]',
 		],
 		binPrice: ".x-bin-price div.x-price-primary > span.ux-textspans",
 		bidButton: "#bidBtn_btn",
 		viewBids: 'a[href*="viewbids"]',
 		binButton: "#binBtn_btn_1",
-		specRows: ".ux-layout-section-evo__item--table-view .ux-labels-values",
+		specRows:
+			'.ux-layout-section-evo__item--table-view .ux-labels-values, [data-testid="ux-layout-section-evo__item"] > .ux-layout-section-evo__col',
 		specLabel: ".ux-labels-values__labels .ux-textspans",
 		specValues: ".ux-labels-values__values .ux-textspans",
 		specValuesContainer: ".ux-labels-values__values",
@@ -77,7 +79,7 @@ var ECA = {
 			'[data-testid*="seller"] a.ux-textspans',
 		],
 		sellerFeedback:
-			".x-sellercard-atf__info__about-seller .ux-textspans--SECONDARY",
+			".x-sellercard-atf__info__about-seller .ux-textspans--SECONDARY, .x-sellercard-atf .ux-textspans--PSEUDOLINK",
 		reviewCards: ".fdbk-container",
 		reviewComment: ".fdbk-container__details__comment",
 		reviewUser: ".fdbk-container__details__info__username",

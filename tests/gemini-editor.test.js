@@ -46,4 +46,17 @@ describe("Gemini editor adapter", () => {
 			editorApi().insertPrompt(editor, "First line\nSecond line with space"),
 		).toBe(true);
 	});
+
+	it("accepts paragraph and br DOM line breaks", () => {
+		document.body.innerHTML =
+			'<div contenteditable="true" role="textbox"></div>';
+		const editor = document.querySelector("div");
+		editor.addEventListener("input", () => {
+			editor.innerHTML =
+				"<div>First line</div><div>Second line<br>Third line</div>";
+		});
+		expect(
+			editorApi().insertPrompt(editor, "First line\nSecond line\nThird line"),
+		).toBe(true);
+	});
 });

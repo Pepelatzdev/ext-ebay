@@ -43,7 +43,10 @@ saveBtn.addEventListener("click", () => {
 		return;
 	}
 	if (!isValidGeminiUrl(geminiUrlValue)) {
-		showStatus(`URL must start with https://${ECA.GEMINI_HOST}/`, "error");
+		showStatus(
+			`Use a Gemini Gem URL such as https://${ECA.GEMINI_HOST}/gem/your-gem-id. Existing chat URLs are not supported.`,
+			"error",
+		);
 		return;
 	}
 

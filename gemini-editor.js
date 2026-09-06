@@ -51,7 +51,39 @@ var ECAGeminiEditor = (() => {
 	function comparableText(value) {
 		return String(value)
 			.replace(/\r\n?/g, "\n")
-			.replace(/\u00a0/g, " ");
+			.replace(/\u00a0/g, " ")
+			.replace(/\n+$/g, "");
+	}
+
+	function editorText(editor) {
+		if (typeof editor.innerText === "string" && editor.innerText) {
+			return editor.innerText;
+		}
+		const blockTags = new Set([
+			"ADDRESS",
+			"ARTICLE",
+			"DIV",
+			"LI",
+			"P",
+			"PRE",
+			"SECTION",
+		]);
+		let result = "";
+		function visit(node) {
+			if (node.nodeType === 3) {
+				result += node.nodeValue;
+				return;
+			}
+			if (node.nodeType !== 1) return;
+			if (node.tagName === "BR") {
+				result += "\n";
+				return;
+			}
+			for (const child of node.childNodes) visit(child);
+			if (blockTags.has(node.tagName)) result += "\n";
+		}
+		visit(editor);
+		return result;
 	}
 
 	function insertPrompt(editor, prompt) {
@@ -75,7 +107,7 @@ var ECAGeminiEditor = (() => {
 				data: prompt,
 			}),
 		);
-		return comparableText(editor.textContent) === comparableText(prompt);
+		return comparableText(editorText(editor)) === comparableText(prompt);
 	}
 
 	return { findEditor, insertPrompt, waitForEditor };

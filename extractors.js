@@ -78,7 +78,7 @@ function extractCondition() {
 	const specRows = document.querySelectorAll(S.specRows);
 	for (const row of specRows) {
 		const label = row.querySelector(S.specLabel)?.textContent?.trim();
-		if (label === "Condition") {
+		if (/^(Condition|Artikelzustand)$/i.test(label || "")) {
 			const valuesEl = row.querySelector(S.specValuesContainer);
 			if (valuesEl) return longestSpanText(valuesEl);
 			break;
@@ -96,7 +96,7 @@ function extractItemSpecifics() {
 	const rows = document.querySelectorAll(S.specRows);
 	for (const row of rows) {
 		const label = row.querySelector(S.specLabel)?.textContent?.trim();
-		if (!label || label === "Condition") continue;
+		if (!label || /^(Condition|Artikelzustand)$/i.test(label)) continue;
 
 		const valueEls = row.querySelectorAll(S.specValues);
 		const value = Array.from(valueEls)

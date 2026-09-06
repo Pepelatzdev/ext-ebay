@@ -153,6 +153,15 @@ describe("extractAuctionData", () => {
 		expect(result.binPrice).toBe("US $49.99");
 	});
 
+	it("extracts price from current eBay data-testid markup", () => {
+		document.body.innerHTML = `
+			<div data-testid="x-price-primary">
+				<span class="x-price-primary__price"><span class="ux-textspans">EUR 113,01</span></span>
+			</div>
+		`;
+		expect(extractAuctionData().binPrice).toBe("EUR 113,01");
+	});
+
 	it('returns "Auction" with bidPrice when bid button present', () => {
 		document.body.innerHTML = `
 			<button id="bidBtn_btn">Place bid</button>
@@ -364,6 +373,25 @@ describe("extractCondition", () => {
 	it("returns empty string when no condition info exists", () => {
 		document.body.innerHTML = "<div>No condition</div>";
 		expect(extractCondition()).toBe("");
+	});
+
+	it("extracts German item specifics from the current definition-list markup", () => {
+		document.body.innerHTML = `
+			<dl data-testid="ux-layout-section-evo__item">
+				<div class="ux-layout-section-evo__col">
+					<dt class="ux-labels-values__labels"><span class="ux-textspans">Artikelzustand</span></dt>
+					<dd class="ux-labels-values__values"><span class="ux-textspans">Neu: Sonstige</span></dd>
+				</div>
+				<div class="ux-layout-section-evo__col">
+					<dt class="ux-labels-values__labels"><span class="ux-textspans">Marke</span></dt>
+					<dd class="ux-labels-values__values"><span class="ux-textspans">Beispiel</span></dd>
+				</div>
+			</dl>
+		`;
+		expect(extractCondition()).toBe("Neu: Sonstige");
+		expect(extractItemSpecifics()).toEqual([
+			{ label: "Marke", value: "Beispiel" },
+		]);
 	});
 });
 

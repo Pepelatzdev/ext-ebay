@@ -77,7 +77,7 @@ eBay Copy Assistant — розширення для Google Chrome, яке зби
 Відкрийте сторінку налаштувань через контекстне меню іконки розширення → **Options** або через `chrome://extensions/`.
 
 - **Prompt Preamble** — текст, який додається перед даними товару.
-- **Gemini Gem URL** — HTTPS-посилання виду `https://gemini.google.com/gem/…`; адреси звичайних чатів не приймаються як ціль.
+- **Gemini Gem URL** — HTTPS-посилання виду `https://gemini.google.com/gem/…`; наприклад, `https://gemini.google.com/gem/cb9c9074ac8d` є валідним, а `https://gemini.google.com/app/abc123` є URL наявного чату й не приймається як ціль.
 - **Reset to Default** — відновлення стандартної преамбули та Gemini Gem URL.
 
 Налаштування синхронізуються через `chrome.storage.sync`; синхронізація між пристроями потребує ввімкненого Chrome Sync.
