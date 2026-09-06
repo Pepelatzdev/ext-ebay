@@ -49,7 +49,9 @@ var ECAGeminiEditor = (() => {
 	}
 
 	function comparableText(value) {
-		return String(value).replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ");
+		return String(value)
+			.replace(/\r\n?/g, "\n")
+			.replace(/\u00a0/g, " ");
 	}
 
 	function insertPrompt(editor, prompt) {
