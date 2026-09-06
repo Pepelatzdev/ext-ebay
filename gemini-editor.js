@@ -48,6 +48,10 @@ var ECAGeminiEditor = (() => {
 		});
 	}
 
+	function comparableText(value) {
+		return String(value).replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ");
+	}
+
 	function insertPrompt(editor, prompt) {
 		editor.focus();
 		try {
@@ -69,7 +73,7 @@ var ECAGeminiEditor = (() => {
 				data: prompt,
 			}),
 		);
-		return (editor.textContent || "").includes(prompt.slice(0, 200));
+		return comparableText(editor.textContent) === comparableText(prompt);
 	}
 
 	return { findEditor, insertPrompt, waitForEditor };
