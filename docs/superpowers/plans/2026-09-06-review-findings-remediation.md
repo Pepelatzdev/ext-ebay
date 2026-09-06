@@ -29,31 +29,31 @@
 **Files:**
 - Modify: `package-lock.json`
 
-- [ ] **Step 1: Confirm the current audit failure**
+- [x] **Step 1: Confirm the current audit failure**
 
 Run: `npm audit --audit-level=high`
 
 Expected: FAIL and identify vulnerable `nanoid@3.3.16` and `postcss@8.5.22` under Vitest/Vite.
 
-- [ ] **Step 2: Apply npm's compatible dependency resolution**
+- [x] **Step 2: Apply npm's compatible dependency resolution**
 
 Run: `npm audit fix`
 
 Expected: npm updates only compatible transitive development dependencies; it does not add runtime packages or perform a forced major-version update.
 
-- [ ] **Step 3: Verify the resolved dependency tree**
+- [x] **Step 3: Verify the resolved dependency tree**
 
 Run: `npm ls nanoid postcss && npm audit --audit-level=high`
 
 Expected: `nanoid` resolves to at least `3.3.18`, `postcss` resolves beyond `8.5.22`, and the audit reports zero high-severity vulnerabilities.
 
-- [ ] **Step 4: Verify the dependency update does not affect behavior**
+- [x] **Step 4: Verify the dependency update does not affect behavior**
 
 Run: `npm run check && npm test`
 
 Expected: Biome succeeds and all existing test files pass.
 
-- [ ] **Step 5: Commit the lockfile update**
+- [x] **Step 5: Commit the lockfile update**
 
 ```bash
 git add package-lock.json
@@ -66,7 +66,7 @@ git commit -m "chore: resolve development dependency advisories"
 - Modify: `tests/report-store.test.js`
 - Modify: `report-store.js`
 
-- [ ] **Step 1: Add regression tests for concurrency and queue recovery**
+- [x] **Step 1: Add regression tests for concurrency and queue recovery**
 
 Add these cases inside `describe("quota-aware report store", ...)`:
 
@@ -105,13 +105,13 @@ it("continues the save queue after one operation fails", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the new tests and observe the race failure**
+- [x] **Step 2: Run the new tests and observe the race failure**
 
 Run: `npm test -- tests/report-store.test.js`
 
 Expected: FAIL because simultaneous saves calculate history from the same original snapshot.
 
-- [ ] **Step 3: Put the complete save transaction behind a resilient promise queue**
+- [x] **Step 3: Put the complete save transaction behind a resilient promise queue**
 
 In `report-store.js`, replace the current `save` implementation with:
 
@@ -141,13 +141,13 @@ function save(itemId, chatUrl) {
 }
 ```
 
-- [ ] **Step 4: Run report-store and background-flow tests**
+- [x] **Step 4: Run report-store and background-flow tests**
 
 Run: `npm test -- tests/report-store.test.js tests/background.test.js`
 
 Expected: PASS, including simultaneous saves and recovery after a failed write.
 
-- [ ] **Step 5: Commit serialized report persistence**
+- [x] **Step 5: Commit serialized report persistence**
 
 ```bash
 git add report-store.js tests/report-store.test.js
@@ -164,7 +164,7 @@ git commit -m "fix: serialize report history writes"
 - Modify: `tests/message-validation.test.js`
 - Modify: `tests/ui.test.js`
 
-- [ ] **Step 1: Load the shared config in validation tests and cover both URL roles**
+- [x] **Step 1: Load the shared config in validation tests and cover both URL roles**
 
 At the top of `tests/message-validation.test.js`, read `config.js` and construct the validator from both scripts:
 
@@ -207,13 +207,13 @@ it.each([
 
 Extend `tests/ui.test.js` so a stored `https://gemini.google.com/gem/example` renders **Ask Gemini**, while the existing `/gem/example/chat-example` case still renders **Show report**.
 
-- [ ] **Step 2: Run the URL-role tests and observe acceptance of invalid roles**
+- [x] **Step 2: Run the URL-role tests and observe acceptance of invalid roles**
 
 Run: `npm test -- tests/message-validation.test.js tests/ui.test.js`
 
 Expected: FAIL because current validation checks only protocol and host.
 
-- [ ] **Step 3: Add shared URL-role validators**
+- [x] **Step 3: Add shared URL-role validators**
 
 Append these methods after the `ECA` object in `config.js`:
 
@@ -250,13 +250,13 @@ In `message-validation.js`, use `ECA.isGeminiGemUrl(message.url)` for START and 
 
 In `options.js`, return `ECA.isGeminiGemUrl(rawUrl)` from `isValidGeminiUrl`. In `ui.js`, use `ECA.isGeminiReportUrl(chatUrl)` and remove its duplicate host-only helper.
 
-- [ ] **Step 4: Run the URL validation and UI tests**
+- [x] **Step 4: Run the URL validation and UI tests**
 
 Run: `npm test -- tests/message-validation.test.js tests/ui.test.js`
 
 Expected: PASS for recognized Gem/report paths and FAIL-safe behavior for root, existing-chat target, `/app/new`, and foreign-host URLs.
 
-- [ ] **Step 5: Commit URL-role validation**
+- [x] **Step 5: Commit URL-role validation**
 
 ```bash
 git add config.js message-validation.js options.js ui.js tests/message-validation.test.js tests/ui.test.js
@@ -269,7 +269,7 @@ git commit -m "fix: distinguish Gemini targets from reports"
 - Modify: `gemini-content.js`
 - Modify: `tests/gemini-content.test.js`
 
-- [ ] **Step 1: Update the Gemini-flow fixture and add transition coverage**
+- [x] **Step 1: Update the Gemini-flow fixture and add transition coverage**
 
 Load real `config.js` before `gemini-content.js` in the test. Change the happy path to start at `https://gemini.google.com/gem/example`, set `window.location.href` to `https://gemini.google.com/gem/example/chat-id` before advancing the timer, and assert the latter URL is saved.
 
@@ -288,13 +288,13 @@ it("does not save the URL present when monitoring starts", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and observe premature saving**
+- [x] **Step 2: Run the focused test and observe premature saving**
 
 Run: `npm test -- tests/gemini-content.test.js`
 
 Expected: FAIL because the initial URL currently qualifies immediately.
 
-- [ ] **Step 3: Require a normalized URL transition**
+- [x] **Step 3: Require a normalized URL transition**
 
 Replace the local report regex and `waitForChatUrl` entry with:
 
@@ -327,13 +327,13 @@ function waitForChatUrl(initialUrl = window.location.href) {
 }
 ```
 
-- [ ] **Step 4: Run Gemini orchestration tests**
+- [x] **Step 4: Run Gemini orchestration tests**
 
 Run: `npm test -- tests/gemini-content.test.js tests/background.test.js`
 
 Expected: PASS; a report is saved only after a qualifying pathname transition.
 
-- [ ] **Step 5: Commit chat-transition tracking**
+- [x] **Step 5: Commit chat-transition tracking**
 
 ```bash
 git add gemini-content.js tests/gemini-content.test.js
@@ -346,7 +346,7 @@ git commit -m "fix: wait for a new Gemini chat before saving"
 - Modify: `gemini-editor.js`
 - Modify: `tests/gemini-editor.test.js`
 
-- [ ] **Step 1: Add partial-insertion and harmless-normalization tests**
+- [x] **Step 1: Add partial-insertion and harmless-normalization tests**
 
 Add these cases to `tests/gemini-editor.test.js`:
 
@@ -370,13 +370,13 @@ it("accepts equivalent line endings and spaces", () => {
 });
 ```
 
-- [ ] **Step 2: Run the editor tests and observe the prefix false positive**
+- [x] **Step 2: Run the editor tests and observe the prefix false positive**
 
 Run: `npm test -- tests/gemini-editor.test.js`
 
 Expected: FAIL because the current check accepts any editor containing the first 200 characters.
 
-- [ ] **Step 3: Compare complete normalized strings**
+- [x] **Step 3: Compare complete normalized strings**
 
 In `gemini-editor.js`, add:
 
@@ -392,13 +392,13 @@ Replace the final return in `insertPrompt` with:
 return comparableText(editor.textContent) === comparableText(prompt);
 ```
 
-- [ ] **Step 4: Run editor and Gemini-flow tests**
+- [x] **Step 4: Run editor and Gemini-flow tests**
 
 Run: `npm test -- tests/gemini-editor.test.js tests/gemini-content.test.js`
 
 Expected: PASS; partial insertion blocks ACK while content-preserving normalization remains accepted.
 
-- [ ] **Step 5: Commit complete insertion verification**
+- [x] **Step 5: Commit complete insertion verification**
 
 ```bash
 git add gemini-editor.js tests/gemini-editor.test.js
@@ -411,7 +411,7 @@ git commit -m "fix: verify complete Gemini prompt insertion"
 - Modify: `request-store.js`
 - Modify: `tests/request-store.test.js`
 
-- [ ] **Step 1: Make the store fixture use current timestamps and add expiry tests**
+- [x] **Step 1: Make the store fixture use current timestamps and add expiry tests**
 
 Change existing fixture requests from `createdAt: 1000` to `createdAt: Date.now()`. Add:
 
@@ -443,13 +443,13 @@ it.each([undefined, "invalid", Number.NaN])(
 );
 ```
 
-- [ ] **Step 2: Run the store tests and observe expired state being returned**
+- [x] **Step 2: Run the store tests and observe expired state being returned**
 
 Run: `npm test -- tests/request-store.test.js`
 
 Expected: FAIL because `get()` currently returns raw session state.
 
-- [ ] **Step 3: Validate age and clean invalid requests in `get()`**
+- [x] **Step 3: Validate age and clean invalid requests in `get()`**
 
 Replace `get` in `request-store.js` with:
 
@@ -466,13 +466,13 @@ async function get(tabId) {
 }
 ```
 
-- [ ] **Step 4: Run request-store and background-flow tests**
+- [x] **Step 4: Run request-store and background-flow tests**
 
 Run: `npm test -- tests/request-store.test.js tests/background.test.js`
 
 Expected: PASS; delayed alarms can no longer expose expired requests.
 
-- [ ] **Step 5: Commit read-time TTL enforcement**
+- [x] **Step 5: Commit read-time TTL enforcement**
 
 ```bash
 git add request-store.js tests/request-store.test.js
@@ -484,7 +484,7 @@ git commit -m "fix: enforce Gemini request expiry on read"
 **Files:**
 - Modify: `README.md`
 
-- [ ] **Step 1: Update the documented behavior and requirements**
+- [x] **Step 1: Update the documented behavior and requirements**
 
 Make these exact content changes:
 
@@ -496,7 +496,7 @@ Make these exact content changes:
 - Change the Node requirement to Node.js 22.13 or newer in the Node 22 release line.
 - List both `zip` and `unzip` as local system requirements.
 
-- [ ] **Step 2: Check documentation against source constants and workflows**
+- [x] **Step 2: Check documentation against source constants and workflows**
 
 Run:
 
@@ -508,13 +508,13 @@ rg -n "node-version|npm audit|verify:package" .github/workflows/*.yml
 
 Expected: README statements match the five-minute TTL, prompt limits, Node 22 CI line, package output, and active OAuth-based release workflow.
 
-- [ ] **Step 3: Run documentation compliance tests**
+- [x] **Step 3: Run documentation compliance tests**
 
 Run: `npm test -- tests/compliance.test.js tests/release-scripts.test.js`
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit README corrections**
+- [x] **Step 4: Commit README corrections**
 
 ```bash
 git add README.md
@@ -526,25 +526,25 @@ git commit -m "docs: align README with extension behavior"
 **Files:**
 - Verify all modified files.
 
-- [ ] **Step 1: Run static analysis and the full test suite**
+- [x] **Step 1: Run static analysis and the full test suite**
 
 Run: `npm run check && npm test`
 
 Expected: Biome succeeds and all test files pass.
 
-- [ ] **Step 2: Run dependency and version checks**
+- [x] **Step 2: Run dependency and version checks**
 
 Run: `npm audit --audit-level=high && npm run verify:version`
 
 Expected: zero high-severity advisories and version `1.0.2` remains consistent.
 
-- [ ] **Step 3: Build and verify the production archive**
+- [x] **Step 3: Build and verify the production archive**
 
 Run: `npm run pack && npm run verify:package`
 
 Expected: `extension.zip` is created and reports `Package verified: 1.0.2`.
 
-- [ ] **Step 4: Inspect the final change set**
+- [x] **Step 4: Inspect the final change set**
 
 Run: `git status --short && git diff --check && git log --oneline -8`
 
