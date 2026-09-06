@@ -7,18 +7,30 @@
 
 /* global chrome, ECA, ECAGeminiEditor */
 (() => {
-	const CHAT_PATH_RE = /\/(app|chat|chats)\/[^/?#]|\/gem\/[^/?#]+\/[^/?#]/;
-
 	async function send(type, extra = {}) {
 		return chrome.runtime.sendMessage({ type, ...extra });
 	}
 
-	function waitForChatUrl() {
+	function comparableUrl(rawUrl) {
+		try {
+			const url = new URL(rawUrl);
+			return `${url.origin}${url.pathname}`;
+		} catch {
+			return null;
+		}
+	}
+
+	function waitForChatUrl(initialUrl = window.location.href) {
+		const initial = comparableUrl(initialUrl);
 		return new Promise((resolve) => {
 			let attempts = 0;
 			const timer = setInterval(() => {
 				attempts++;
-				if (CHAT_PATH_RE.test(window.location.href)) {
+				const current = comparableUrl(window.location.href);
+				if (
+					current !== initial &&
+					ECA.isGeminiReportUrl(window.location.href)
+				) {
 					clearInterval(timer);
 					resolve(window.location.href);
 				} else if (attempts >= 300) {
@@ -42,7 +54,7 @@
 			if (!ack?.success) return;
 		}
 
-		const chatUrl = await waitForChatUrl();
+		const chatUrl = await waitForChatUrl(request.targetUrl);
 		if (chatUrl) {
 			await send(ECA.MESSAGE.SAVE_REPORT, { url: chatUrl });
 		}

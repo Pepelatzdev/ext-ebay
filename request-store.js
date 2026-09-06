@@ -6,8 +6,11 @@ var ECARequestStore = (() => {
 	const key = (tabId) => `${KEY_PREFIX}${tabId}`;
 	const alarm = (tabId) => `${ALARM_PREFIX}${tabId}`;
 
-	async function create(tabId, { itemId, prompt, createdAt = Date.now() }) {
-		const request = { itemId, prompt, createdAt, state: "pending" };
+	async function create(
+		tabId,
+		{ itemId, prompt, targetUrl, createdAt = Date.now() },
+	) {
+		const request = { itemId, prompt, targetUrl, createdAt, state: "pending" };
 		await chrome.storage.session.set({ [key(tabId)]: request });
 		chrome.alarms.create(alarm(tabId), {
 			when: createdAt + ECA.PENDING_PROMPT_TTL_MS,
@@ -24,6 +27,7 @@ var ECARequestStore = (() => {
 		if (request?.state !== "pending") return null;
 		const updated = {
 			itemId: request.itemId,
+			targetUrl: request.targetUrl,
 			createdAt: request.createdAt,
 			state: "waiting_for_chat",
 		};

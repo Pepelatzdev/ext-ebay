@@ -2,14 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const configCode = readFileSync(resolve("config.js"), "utf8");
 const code = readFileSync(resolve("gemini-content.js"), "utf8");
-const ECA = {
-	MESSAGE: {
-		CLAIM: "CLAIM_GEMINI_REQUEST",
-		ACK_INSERTED: "ACK_PROMPT_INSERTED",
-		SAVE_REPORT: "SAVE_GEMINI_REPORT",
-	},
-};
+const ECA = new Function(`${configCode}; return ECA;`)();
 
 function setUrl(url) {
 	Object.defineProperty(window, "location", {
@@ -46,7 +41,7 @@ async function finishChatPolling() {
 
 beforeEach(() => {
 	vi.useFakeTimers();
-	setUrl("https://gemini.google.com/app/chat-id");
+	setUrl("https://gemini.google.com/gem/example");
 });
 
 afterEach(() => {
@@ -56,22 +51,34 @@ afterEach(() => {
 describe("Gemini tab request flow", () => {
 	it("claims, inserts, ACKs and saves a pending request in order", async () => {
 		const { sendMessage } = runFlow({
-			request: { state: "pending", itemId: "123", prompt: "Analyze item" },
+			request: {
+				state: "pending",
+				itemId: "123",
+				prompt: "Analyze item",
+				targetUrl: "https://gemini.google.com/gem/example",
+			},
 		});
+		for (let index = 0; index < 5; index++) await Promise.resolve();
+		setUrl("https://gemini.google.com/gem/example/chat-id");
 		await finishChatPolling();
 		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{ type: "ACK_PROMPT_INSERTED" },
 			{
 				type: "SAVE_GEMINI_REPORT",
-				url: "https://gemini.google.com/app/chat-id",
+				url: "https://gemini.google.com/gem/example/chat-id",
 			},
 		]);
 	});
 
 	it("resumes URL monitoring after reload without inserting again", async () => {
+		setUrl("https://gemini.google.com/gem/example/chat-id");
 		const { ECAGeminiEditor, sendMessage } = runFlow({
-			request: { state: "waiting_for_chat", itemId: "123" },
+			request: {
+				state: "waiting_for_chat",
+				itemId: "123",
+				targetUrl: "https://gemini.google.com/gem/example",
+			},
 		});
 		await finishChatPolling();
 		expect(ECAGeminiEditor.insertPrompt).not.toHaveBeenCalled();
@@ -79,7 +86,7 @@ describe("Gemini tab request flow", () => {
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{
 				type: "SAVE_GEMINI_REPORT",
-				url: "https://gemini.google.com/app/chat-id",
+				url: "https://gemini.google.com/gem/example/chat-id",
 			},
 		]);
 	});
@@ -88,5 +95,21 @@ describe("Gemini tab request flow", () => {
 		const { sendMessage } = runFlow({ request: null, editor: null });
 		for (let index = 0; index < 5; index++) await Promise.resolve();
 		expect(sendMessage).not.toHaveBeenCalled();
+	});
+
+	it("does not save the URL used to start the request", async () => {
+		setUrl("https://gemini.google.com/app/existing-chat");
+		const { sendMessage } = runFlow({
+			request: {
+				state: "pending",
+				itemId: "123",
+				prompt: "Analyze item",
+				targetUrl: "https://gemini.google.com/app/existing-chat",
+			},
+		});
+		await finishChatPolling();
+		expect(sendMessage).not.toHaveBeenCalledWith(
+			expect.objectContaining({ type: ECA.MESSAGE.SAVE_REPORT }),
+		);
 	});
 });

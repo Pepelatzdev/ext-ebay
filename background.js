@@ -41,6 +41,7 @@ async function handleMessage(message, sender) {
 		await ECARequestStore.create(tab.id, {
 			itemId: message.itemId,
 			prompt: message.prompt,
+			targetUrl: message.url,
 		});
 		return { success: true, tabId: tab.id };
 	}

@@ -115,7 +115,7 @@ describe("background Gemini request flow", () => {
 	it("ACKs and saves only the report mapped to the sender tab", async () => {
 		const { ECA, handleMessage, sync } = createWorker();
 		const gemSender = {
-			url: "https://gemini.google.com/app/new",
+			url: "https://gemini.google.com/app/report-111",
 			tab: { id: 101 },
 		};
 		await handleMessage(
@@ -134,12 +134,12 @@ describe("background Gemini request flow", () => {
 			await handleMessage(
 				{
 					type: ECA.MESSAGE.SAVE_REPORT,
-					url: "https://gemini.google.com/app/new",
+					url: "https://gemini.google.com/app/report-111",
 				},
 				gemSender,
 			),
 		).toEqual({ success: true });
-		expect(sync.chat_111).toBe("https://gemini.google.com/app/new");
+		expect(sync.chat_111).toBe("https://gemini.google.com/app/report-111");
 	});
 
 	it("cleans requests on tab close and TTL alarm", async () => {

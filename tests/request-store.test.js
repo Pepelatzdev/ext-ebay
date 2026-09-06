@@ -31,11 +31,13 @@ describe("request store", () => {
 		await store.create(42, {
 			itemId: "123",
 			prompt: "Prompt",
+			targetUrl: "https://gemini.google.com/gem/example",
 			createdAt: 1000,
 		});
 		expect(await store.get(42)).toMatchObject({
 			state: "pending",
 			itemId: "123",
+			targetUrl: "https://gemini.google.com/gem/example",
 		});
 	});
 
@@ -44,11 +46,13 @@ describe("request store", () => {
 		await store.create(42, {
 			itemId: "123",
 			prompt: "Prompt",
+			targetUrl: "https://gemini.google.com/gem/example",
 			createdAt: 1000,
 		});
 		await store.markInserted(42);
 		expect(await store.get(42)).toEqual({
 			itemId: "123",
+			targetUrl: "https://gemini.google.com/gem/example",
 			createdAt: 1000,
 			state: "waiting_for_chat",
 		});
