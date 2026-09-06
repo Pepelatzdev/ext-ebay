@@ -90,7 +90,7 @@ async function renderUI() {
 		const result = await chrome.storage.sync.get([key]);
 		const chatUrl = result[key];
 
-		if (chatUrl && isSafeGeminiUrl(chatUrl)) {
+		if (chatUrl && ECA.isGeminiReportUrl(chatUrl)) {
 			renderReportReady(container, chatUrl, itemId);
 		} else {
 			renderAskButton(container, itemId);
@@ -110,15 +110,6 @@ async function renderUI() {
 }
 
 // ── Saved Report Actions ─────────────────────────────────────
-
-function isSafeGeminiUrl(rawUrl) {
-	try {
-		const u = new URL(rawUrl);
-		return u.protocol === "https:" && u.hostname === ECA.GEMINI_HOST;
-	} catch {
-		return false;
-	}
-}
 
 function renderReportReady(container, chatUrl, itemId) {
 	const resetBtn = document.createElement("button");

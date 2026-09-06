@@ -2,19 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const code = readFileSync(resolve("message-validation.js"), "utf8");
-const validation = new Function("ECA", `${code}; return ECAMessageValidation;`)(
-	{
-		GEMINI_HOST: "gemini.google.com",
-		MAX_PROMPT_CHARS: 120_000,
-		MESSAGE: {
-			START: "START_GEMINI_REQUEST",
-			CLAIM: "CLAIM_GEMINI_REQUEST",
-			ACK_INSERTED: "ACK_PROMPT_INSERTED",
-			SAVE_REPORT: "SAVE_GEMINI_REPORT",
-		},
-	},
-);
+const configCode = readFileSync(resolve("config.js"), "utf8");
+const validationCode = readFileSync(resolve("message-validation.js"), "utf8");
+const validation = new Function(
+	`${configCode}\n${validationCode}; return ECAMessageValidation;`,
+)();
 
 describe("message validation", () => {
 	it("accepts a supported HTTPS eBay item sender", () => {
@@ -94,5 +86,30 @@ describe("message validation", () => {
 				"SAVE_GEMINI_REPORT",
 			),
 		).toEqual({ ok: true });
+	});
+
+	it.each([
+		"https://gemini.google.com/app/existing-chat",
+		"https://gemini.google.com/",
+		"https://example.com/gem/id",
+	])("rejects a non-Gem start target %s", (url) => {
+		const result = validation.validateStart(
+			{ type: "START_GEMINI_REQUEST", itemId: "123", prompt: "Prompt", url },
+			{ url: "https://www.ebay.com/itm/123", tab: { id: 1 } },
+		);
+		expect(result).toMatchObject({ ok: false });
+	});
+
+	it.each([
+		"https://gemini.google.com/gem/id",
+		"https://gemini.google.com/app/new",
+		"https://gemini.google.com/",
+	])("rejects a non-report save URL %s", (url) => {
+		const result = validation.validateGemini(
+			{ type: "SAVE_GEMINI_REPORT", url },
+			{ url, tab: { id: 7 } },
+			"SAVE_GEMINI_REPORT",
+		);
+		expect(result).toMatchObject({ ok: false });
 	});
 });

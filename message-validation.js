@@ -83,7 +83,7 @@ var ECAMessageValidation = (() => {
 		) {
 			return { ok: false, error: "Invalid request payload" };
 		}
-		if (!isSafeGeminiUrl(message.url)) {
+		if (!ECA.isGeminiGemUrl(message.url)) {
 			return { ok: false, error: "Invalid Gemini URL" };
 		}
 		return { ok: true };
@@ -98,7 +98,7 @@ var ECAMessageValidation = (() => {
 		if (!exactKeys(message, allowed)) {
 			return { ok: false, error: "Unexpected request fields" };
 		}
-		if (type === ECA.MESSAGE.SAVE_REPORT && !isSafeGeminiUrl(message.url)) {
+		if (type === ECA.MESSAGE.SAVE_REPORT && !ECA.isGeminiReportUrl(message.url)) {
 			return { ok: false, error: "Invalid report URL" };
 		}
 		return { ok: true };

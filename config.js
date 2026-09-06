@@ -94,3 +94,30 @@ var ECA = {
 		],
 	},
 };
+
+ECA.isGeminiGemUrl = (rawUrl) => {
+	try {
+		const url = new URL(rawUrl);
+		return (
+			url.protocol === "https:" &&
+			url.hostname === ECA.GEMINI_HOST &&
+			/^\/gem\/[^/]+\/?$/.test(url.pathname)
+		);
+	} catch {
+		return false;
+	}
+};
+
+ECA.isGeminiReportUrl = (rawUrl) => {
+	try {
+		const url = new URL(rawUrl);
+		return (
+			url.protocol === "https:" &&
+			url.hostname === ECA.GEMINI_HOST &&
+			(/^\/gem\/[^/]+\/[^/]+\/?$/.test(url.pathname) ||
+				/^\/(app|chat|chats)\/(?!new\/?$)[^/]+\/?$/.test(url.pathname))
+		);
+	} catch {
+		return false;
+	}
+};

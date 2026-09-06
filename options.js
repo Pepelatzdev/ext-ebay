@@ -26,12 +26,7 @@ chrome.storage.sync
 	});
 
 function isValidGeminiUrl(rawUrl) {
-	try {
-		const u = new URL(rawUrl);
-		return u.protocol === "https:" && u.hostname === ECA.GEMINI_HOST;
-	} catch {
-		return false;
-	}
+	return ECA.isGeminiGemUrl(rawUrl);
 }
 
 // Save button

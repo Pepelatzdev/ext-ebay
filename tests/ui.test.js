@@ -122,6 +122,18 @@ describe("floating Gemini actions", () => {
 		expect(container?.querySelector("a")).toBeNull();
 	});
 
+	it("does not treat a Gemini Gem target as a saved report", async () => {
+		globalThis.chrome = createChrome({
+			chat_123456789012: "https://gemini.google.com/gem/example",
+		});
+		const { renderUI } = loadUi();
+		await renderUI();
+
+		const container = document.getElementById("ebay-copy-assistant-container");
+		expect(container?.textContent).toContain("Ask Gemini");
+		expect(container?.querySelector("a")).toBeNull();
+	});
+
 	it("preserves the saved report while starting a new Gemini request", async () => {
 		globalThis.chrome = createChrome({
 			chat_123456789012: "https://gemini.google.com/gem/example/chat-example",
