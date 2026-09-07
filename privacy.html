@@ -13,17 +13,17 @@
 <body>
   <main>
     <h1>eBay Copy Assistant Privacy Policy</h1>
-    <p>Last updated: July 24, 2026.</p>
+    <p>Last updated: September 7, 2026.</p>
     <p>eBay Copy Assistant processes listing data only after the user clicks Ask Gemini. It has no developer-operated backend, analytics, advertising, or data-sale functionality.</p>
 
     <h2>Data processed</h2>
-    <p>The extension reads the current eBay listing URL, title, price, condition, shipping, returns, seller information, visible reviews, item specifics, and description to provide its user-facing analysis feature.</p>
+    <p>The extension reads the current eBay listing URL, title, price, condition, shipping, returns, seller information, visible reviews, item specifics, and description to provide its user-facing analysis feature. If the user chooses them, it also reads up to ten images from the listing's main gallery.</p>
 
     <h2>How data is used and shared</h2>
-    <p>The prompt is generated locally, copied to the clipboard as a fallback, and inserted into the Google Gemini page selected by the user. Google Gemini is the only external recipient; its processing is governed by <a href="https://policies.google.com/terms">Google's terms</a> and <a href="https://policies.google.com/privacy">privacy policy</a>.</p>
+    <p>The prompt is generated locally, copied to the clipboard as a fallback, and inserted into the Google Gemini page selected by the user. Chosen gallery images are fetched over HTTPS from eBay's image CDN and inserted into the selected Gemini page as separate files. Google Gemini is the only external recipient; its processing is governed by <a href="https://policies.google.com/terms">Google's terms</a> and <a href="https://policies.google.com/privacy">privacy policy</a>.</p>
 
     <h2>Storage and retention</h2>
-    <p>Pending prompts are temporarily stored in <code>chrome.storage.session</code> for five minutes starting when the Gemini tab is opened; the period is not renewed after insertion. Expired requests are removed automatically or when next read. Settings and saved Gemini report URLs use Chrome Sync. The extension does not store listing prompts on developer servers.</p>
+    <p>Pending prompts are temporarily stored in <code>chrome.storage.session</code> for five minutes starting when the Gemini tab is opened. After text insertion, the prepared request can remain for up to thirty minutes while selected images are transferred. Image bytes are held only in temporary service-worker memory and are not written to Chrome Sync or session storage. Expired requests and temporary image data are removed automatically or when next read. Settings and saved Gemini report URLs use Chrome Sync. The extension does not store listing prompts or image bytes on developer servers.</p>
 
     <h2>Deletion</h2>
     <p>Pending prompts expire automatically. Users can remove saved extension data through Chrome's extension data controls. Uninstalling the extension stops further processing; synced data may remain in the user's Google account until cleared through Chrome.</p>

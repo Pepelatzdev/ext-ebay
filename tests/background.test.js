@@ -142,7 +142,7 @@ describe("background Gemini request flow", () => {
 		expect(sync.chat_111).toBe("https://gemini.google.com/app/report-111");
 	});
 
-	it("cleans requests on tab close and TTL alarm", async () => {
+	it("cleans requests on tab close and expired TTL alarm", async () => {
 		const { ECA, handleMessage, listeners, session } = createWorker();
 		await handleMessage(
 			{
@@ -164,7 +164,9 @@ describe("background Gemini request flow", () => {
 			},
 			{ url: "https://www.ebay.com/itm/222", tab: { id: 2 } },
 		);
+		vi.setSystemTime(Date.now() + 5 * 60 * 1000 + 1);
 		await listeners.alarm({ name: "eca-request:102" });
 		expect(session["geminiRequest:102"]).toBeUndefined();
+		vi.useRealTimers();
 	});
 });

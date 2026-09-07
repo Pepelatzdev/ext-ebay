@@ -139,7 +139,9 @@ var ECAMessageValidation = (() => {
 								? ["type", "requestId", "photoId"]
 								: type === ECA.MESSAGE.RETRY_PHOTOS
 									? ["type", "requestId", "photoIds"]
-									: ["type"];
+									: type === ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS
+										? ["type", "requestId"]
+										: ["type"];
 		if (!exactKeys(message, allowed)) {
 			return { ok: false, error: "Unexpected request fields" };
 		}
@@ -155,6 +157,7 @@ var ECAMessageValidation = (() => {
 				ECA.MESSAGE.GET_PHOTO_CHUNK,
 				ECA.MESSAGE.PHOTO_READY,
 				ECA.MESSAGE.RETRY_PHOTOS,
+				ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
 			].includes(type) &&
 			typeof message.requestId !== "string"
 		) {

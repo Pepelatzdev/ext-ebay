@@ -20,16 +20,31 @@
 		element.textContent = text;
 	}
 
+	function statusAction(label, handler) {
+		const element = document.getElementById("eca-gemini-status");
+		if (!element) return;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.textContent = label;
+		button.style.cssText =
+			"display:block;margin-top:8px;padding:4px 8px;border:0;border-radius:4px;cursor:pointer";
+		button.addEventListener("click", handler, { once: true });
+		element.appendChild(button);
+	}
+
 	async function send(type, extra = {}) {
 		return chrome.runtime.sendMessage({ type, ...extra });
 	}
 
-	async function attachSelectedPhotos(request) {
+	async function attachSelectedPhotos(request, retryPhotoIds = null) {
 		if (!request.photos?.length) return { success: true, completed: [] };
 		status("Adding photos…");
-		const prepared = await send(ECA.MESSAGE.PREPARE_PHOTOS, {
-			requestId: request.requestId,
-		});
+		const prepared = await send(
+			retryPhotoIds ? ECA.MESSAGE.RETRY_PHOTOS : ECA.MESSAGE.PREPARE_PHOTOS,
+			retryPhotoIds
+				? { requestId: request.requestId, photoIds: retryPhotoIds }
+				: { requestId: request.requestId },
+		);
 		if (!prepared?.success) {
 			status("Photo preparation failed", "error");
 			return {
@@ -115,6 +130,18 @@
 		});
 	}
 
+	async function waitAndSave(request) {
+		status("Ready to send", "success");
+		const chatUrl = await waitForChatUrl(request.targetUrl);
+		if (chatUrl) {
+			const saved = await send(ECA.MESSAGE.SAVE_REPORT, { url: chatUrl });
+			status(
+				saved?.success ? "Report link saved" : "Could not save report link",
+				saved?.success ? "success" : "error",
+			);
+		}
+	}
+
 	async function run() {
 		const editor = await ECAGeminiEditor.waitForEditor();
 		if (!editor) return;
@@ -136,18 +163,33 @@
 		if (request.photos?.length) {
 			request.editor = editor;
 			const attachments = await attachSelectedPhotos(request);
-			if (!attachments.success) return;
+			if (!attachments.success) {
+				statusAction("Retry failed photos", async () => {
+					const retry = await attachSelectedPhotos(request, attachments.failed);
+					if (retry.success) {
+						await waitAndSave(request);
+						return;
+					}
+					status(`Some photos failed (${retry.failed.length})`, "error");
+					statusAction("Continue without failed photos", async () => {
+						const continued = await send(
+							ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
+							{ requestId: request.requestId },
+						);
+						if (continued?.success) await waitAndSave(request);
+					});
+				});
+				statusAction("Continue without failed photos", async () => {
+					const continued = await send(
+						ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
+						{ requestId: request.requestId },
+					);
+					if (continued?.success) await waitAndSave(request);
+				});
+				return;
+			}
 		}
-		status("Ready to send", "success");
-
-		const chatUrl = await waitForChatUrl(request.targetUrl);
-		if (chatUrl) {
-			const saved = await send(ECA.MESSAGE.SAVE_REPORT, { url: chatUrl });
-			status(
-				saved?.success ? "Report link saved" : "Could not save report link",
-				saved?.success ? "success" : "error",
-			);
-		}
+		await waitAndSave(request);
 	}
 
 	run().catch((error) => {

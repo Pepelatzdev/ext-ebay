@@ -89,7 +89,9 @@ describe("production package", () => {
 		expect(manifest.permissions).toContain("alarms");
 		expect(geminiScripts.js).toEqual([
 			"config.js",
+			"photo-transfer.js",
 			"gemini-editor.js",
+			"gemini-attachments.js",
 			"gemini-content.js",
 		]);
 		expect(PRODUCTION_FILES).toEqual(

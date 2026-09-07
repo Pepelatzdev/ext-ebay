@@ -137,6 +137,75 @@ async function handleMessage(message, sender) {
 			last: message.chunkIndex === chunks.length - 1,
 		};
 	}
+	if (message?.type === ECA.MESSAGE.RETRY_PHOTOS) {
+		const validation = ECAMessageValidation.validateGemini(
+			message,
+			sender,
+			ECA.MESSAGE.RETRY_PHOTOS,
+		);
+		if (!validation.ok) return { success: false, error: validation.error };
+		const request = await ECARequestStore.get(sender.tab.id);
+		const retryIds = new Set(message.photoIds);
+		if (
+			!request ||
+			request.requestId !== message.requestId ||
+			request.state !== "failed_partial" ||
+			!retryIds.size ||
+			[...retryIds].some((photoId) => !request.failedPhotoIds.includes(photoId))
+		) {
+			return { success: false, error: "Invalid photo retry" };
+		}
+		const photos = request.photos.filter((photo) =>
+			retryIds.has(photo.photoId),
+		);
+		const result = await ECAPhotoTransfer.downloadSelected(photos);
+		for (const photo of result.succeeded)
+			attachmentCache.set(`${message.requestId}:${photo.photoId}`, photo);
+		const failed = request.failedPhotoIds.filter(
+			(photoId) => !retryIds.has(photoId),
+		);
+		failed.push(...result.failed.map((photo) => photo.photoId));
+		const completed = new Set(request.completedPhotoIds);
+		for (const photo of result.succeeded) completed.add(photo.photoId);
+		const updated = await ECARequestStore.update(sender.tab.id, {
+			failedPhotoIds: [...new Set(failed)],
+			state: failed.length
+				? "failed_partial"
+				: completed.size === request.photos.length
+					? "waiting_for_chat"
+					: "attaching",
+		});
+		return {
+			success: true,
+			requestId: updated.requestId,
+			photos: result.succeeded.map(({ photoId, mimeType, size }) => ({
+				photoId,
+				mimeType,
+				size,
+			})),
+			failed: result.failed,
+		};
+	}
+	if (message?.type === ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS) {
+		const validation = ECAMessageValidation.validateGemini(
+			message,
+			sender,
+			ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
+		);
+		if (!validation.ok) return { success: false, error: validation.error };
+		const request = await ECARequestStore.get(sender.tab.id);
+		if (
+			!request ||
+			request.requestId !== message.requestId ||
+			request.state !== "failed_partial"
+		) {
+			return { success: false, error: "No partial photo request" };
+		}
+		const updated = await ECARequestStore.update(sender.tab.id, {
+			state: "waiting_for_chat",
+		});
+		return { success: true, state: updated.state };
+	}
 	if (message?.type === ECA.MESSAGE.PHOTO_READY) {
 		const validation = ECAMessageValidation.validateGemini(
 			message,
@@ -212,7 +281,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
 	const tabId = ECARequestStore.tabIdFromAlarm(alarm.name);
-	if (tabId !== null) return ECARequestStore.remove(tabId);
+	if (tabId !== null) return ECARequestStore.get(tabId);
 });
 
 chrome.runtime.onInstalled.addListener(async (details) => {

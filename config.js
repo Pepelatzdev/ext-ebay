@@ -41,6 +41,7 @@ var ECA = {
 		GET_PHOTO_CHUNK: "GET_GEMINI_PHOTO_CHUNK",
 		PHOTO_READY: "ACK_GEMINI_PHOTO",
 		RETRY_PHOTOS: "RETRY_GEMINI_PHOTOS",
+		CONTINUE_WITH_FAILED_PHOTOS: "CONTINUE_WITH_FAILED_PHOTOS",
 	},
 	// Minimum length for a description container to be accepted as fallback text.
 	MIN_DESCRIPTION_LENGTH: 60,
