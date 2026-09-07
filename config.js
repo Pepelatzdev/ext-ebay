@@ -20,8 +20,15 @@ var ECA = {
 	// Hard cap on description fetch to keep the service worker from being
 	// killed mid-flight on slow networks.
 	DESC_FETCH_TIMEOUT_MS: 10000,
+	PHOTO_FETCH_TIMEOUT_MS: 15_000,
+	PHOTO_LIMIT: 10,
+	MAX_PHOTO_BYTES: 8 * 1024 * 1024,
+	MAX_PHOTO_REQUEST_BYTES: 32 * 1024 * 1024,
+	PHOTO_CHUNK_BYTES: 256 * 1024,
+	PHOTO_FETCH_CONCURRENCY: 2,
 	// A Gemini request expires if its target tab does not consume it in time.
 	PENDING_PROMPT_TTL_MS: 5 * 60 * 1000,
+	PREPARED_REQUEST_TTL_MS: 30 * 60 * 1000,
 	MAX_DESCRIPTION_CHARS: 100_000,
 	MAX_PROMPT_CHARS: 120_000,
 	MESSAGE: {
@@ -30,12 +37,17 @@ var ECA = {
 		ACK_INSERTED: "ACK_PROMPT_INSERTED",
 		SAVE_REPORT: "SAVE_GEMINI_REPORT",
 		FETCH_DESCRIPTION: "FETCH_DESCRIPTION",
+		PREPARE_PHOTOS: "PREPARE_GEMINI_PHOTOS",
+		GET_PHOTO_CHUNK: "GET_GEMINI_PHOTO_CHUNK",
+		PHOTO_READY: "ACK_GEMINI_PHOTO",
+		RETRY_PHOTOS: "RETRY_GEMINI_PHOTOS",
 	},
 	// Minimum length for a description container to be accepted as fallback text.
 	MIN_DESCRIPTION_LENGTH: 60,
 
 	// ── CSS class names ───────────────────────────────────────
 	CONTAINER_ID: "ebay-copy-assistant-container",
+	PHOTO_PICKER_ID: "ebay-copy-assistant-photo-picker",
 	BTN_ID: "ebay-copy-assistant-btn",
 	RESET_BTN_ID: "ebay-gemini-reset-btn",
 
@@ -95,6 +107,8 @@ var ECA = {
 			'[data-testid="d-item-description"]',
 		],
 	},
+	// eBay's gallery CDN origin is validated again in the service worker.
+	PHOTO_HOSTS: ["i.ebayimg.com"],
 };
 
 ECA.isGeminiGemUrl = (rawUrl) => {
