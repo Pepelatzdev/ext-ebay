@@ -2,9 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const REQUIRED_ENV = [
-	"CHROME_CLIENT_ID",
-	"CHROME_CLIENT_SECRET",
-	"CHROME_REFRESH_TOKEN",
+	"CHROME_ACCESS_TOKEN",
 	"CHROME_PUBLISHER_ID",
 	"CHROME_EXTENSION_ID",
 ];
@@ -29,23 +27,8 @@ async function publishExtension({
 	}
 	if (!fs.existsSync(zipPath)) throw new Error(`ZIP not found: ${zipPath}`);
 
-	const tokenBody = new URLSearchParams({
-		client_id: env.CHROME_CLIENT_ID,
-		client_secret: env.CHROME_CLIENT_SECRET,
-		refresh_token: env.CHROME_REFRESH_TOKEN,
-		grant_type: "refresh_token",
-	});
-	const tokenResponse = await jsonRequest(
-		fetchImpl,
-		"https://oauth2.googleapis.com/token",
-		{ method: "POST", body: tokenBody },
-	);
-	if (!tokenResponse.access_token) {
-		throw new Error("OAuth response has no access_token");
-	}
-
 	const itemName = `publishers/${env.CHROME_PUBLISHER_ID}/items/${env.CHROME_EXTENSION_ID}`;
-	const headers = { Authorization: `Bearer ${tokenResponse.access_token}` };
+	const headers = { Authorization: `Bearer ${env.CHROME_ACCESS_TOKEN}` };
 	const upload = await jsonRequest(
 		fetchImpl,
 		`https://chromewebstore.googleapis.com/upload/v2/${itemName}:upload`,

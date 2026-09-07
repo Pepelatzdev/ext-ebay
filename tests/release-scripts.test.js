@@ -131,10 +131,9 @@ describe("production package", () => {
 });
 
 describe("Chrome Web Store V2 publisher", () => {
-	it("refreshes OAuth, polls an async upload and publishes", async () => {
+	it("uses an access token, polls an async upload and publishes", async () => {
 		const { publishExtension } = require("../scripts/cws-publish.js");
 		const responses = [
-			{ access_token: "secret-token" },
 			{ uploadState: "IN_PROGRESS" },
 			{ lastAsyncUploadState: "SUCCEEDED" },
 			{ itemId: "extension-id", state: "PENDING_REVIEW" },
@@ -152,9 +151,7 @@ describe("Chrome Web Store V2 publisher", () => {
 		writeFileSync(zipPath, "zip-bytes");
 		const result = await publishExtension({
 			env: {
-				CHROME_CLIENT_ID: "client",
-				CHROME_CLIENT_SECRET: "client-secret",
-				CHROME_REFRESH_TOKEN: "refresh",
+				CHROME_ACCESS_TOKEN: "access-token",
 				CHROME_PUBLISHER_ID: "publisher",
 				CHROME_EXTENSION_ID: "extension-id",
 			},
@@ -167,7 +164,7 @@ describe("Chrome Web Store V2 publisher", () => {
 
 	it("rejects a failed upload without publishing", async () => {
 		const { publishExtension } = require("../scripts/cws-publish.js");
-		const responses = [{ access_token: "token" }, { uploadState: "FAILED" }];
+		const responses = [{ uploadState: "FAILED" }];
 		const fetchImpl = async () => ({
 			ok: true,
 			status: 200,
@@ -182,9 +179,7 @@ describe("Chrome Web Store V2 publisher", () => {
 		await expect(
 			publishExtension({
 				env: {
-					CHROME_CLIENT_ID: "client",
-					CHROME_CLIENT_SECRET: "secret",
-					CHROME_REFRESH_TOKEN: "refresh",
+					CHROME_ACCESS_TOKEN: "token",
 					CHROME_PUBLISHER_ID: "publisher",
 					CHROME_EXTENSION_ID: "extension-id",
 				},
@@ -192,5 +187,17 @@ describe("Chrome Web Store V2 publisher", () => {
 				zipPath,
 			}),
 		).rejects.toThrow(/Upload failed/);
+	});
+
+	it("requires the short-lived access token", async () => {
+		const { publishExtension } = require("../scripts/cws-publish.js");
+		await expect(
+			publishExtension({
+				env: {
+					CHROME_PUBLISHER_ID: "publisher",
+					CHROME_EXTENSION_ID: "extension-id",
+				},
+			}),
+		).rejects.toThrow(/CHROME_ACCESS_TOKEN/);
 	});
 });

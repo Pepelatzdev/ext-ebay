@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: chrome-web-store-release
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    environment: development
+    environment: chrome-web-store
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -28,6 +29,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Authenticate to Google Cloud
+        id: google-auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          access_token_lifetime: 900s
+          create_credentials_file: false
       - run: npm run check
       - run: npm test
       - run: npm audit --audit-level=high
@@ -48,9 +59,7 @@ jobs:
       - run: npm run verify:package
       - name: Upload and publish through Chrome Web Store API V2
         env:
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID || secrets.CHROME_PUBLISHER_ID }}
-          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+          CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
         run: node scripts/cws-publish.js extension.zip

@@ -155,7 +155,7 @@ npm run verify:package
 - `scripts/pack.js` — створення production ZIP;
 - `scripts/verify-package.js` — перевірка складу й manifest готового ZIP;
 - `scripts/verify-version.js` — контроль узгодженості версії проєкту та релізу;
-- `scripts/cws-publish.js` — OAuth, upload, polling і publish через Chrome Web Store API V2.
+- `scripts/cws-publish.js` — upload, polling і publish через Chrome Web Store API V2 з access token від GitHub OIDC.
 
 ## Зберігання даних і безпека
 
@@ -181,19 +181,20 @@ npm run verify:package
 - `pages.yml` незалежно публікує `index.html` і `privacy.html` у GitHub Pages після push у `main` або ручного запуску;
 - `release.yml` публікує розширення лише для тегів `v*` або після ручного запуску з указаною версією, повторюючи всі quality gates перед публікацією.
 
-Публікація у Chrome Web Store використовує API V2 та OAuth Refresh Token. Для environment `development` потрібно створити repository/environment secrets:
+Публікація у Chrome Web Store використовує API V2 і короткоживучий access token, який GitHub Actions отримує через Workload Identity Federation. Для environment `chrome-web-store` потрібно додати variables:
 
-- `CHROME_CLIENT_ID`;
-- `CHROME_CLIENT_SECRET`;
-- `CHROME_REFRESH_TOKEN`;
-- `CHROME_PUBLISHER_ID` — environment variable (також підтримується secret);
+- `GCP_WORKLOAD_IDENTITY_PROVIDER` — повне ім’я Google Cloud Workload Identity provider;
+- `GCP_SERVICE_ACCOUNT` — email сервісного акаунта з доступом до Chrome Web Store;
+- `CHROME_PUBLISHER_ID`;
 - `CHROME_EXTENSION_ID`.
 
 Одноразове налаштування репозиторію:
 
 1. У **Settings → Pages → Build and deployment → Source** виберіть **GitHub Actions**.
-2. У **Settings → Environments** використовуйте наявне environment `development`, де зберігаються секрети публікації, і додайте відсутні значення.
-3. За потреби увімкніть required reviewers для `development`, щоб кожна публікація потребувала ручного підтвердження.
+2. У **Settings → Environments** використовуйте environment `chrome-web-store` і додайте чотири змінні вище.
+3. У Google Cloud створіть Workload Identity provider для GitHub repository `Pepelatzdev/ext-ebay`, обмежений гілкою `main` і тегами `v*`, та прив’яжіть його до сервісного акаунта.
+4. У Chrome Web Store Developer Dashboard додайте email сервісного акаунта до доступу видавця.
+5. За потреби увімкніть required reviewers для `chrome-web-store`, щоб кожна публікація потребувала ручного підтвердження.
 
 Для релізу синхронізуйте версію в усіх файлах, виконайте повний локальний набір перевірок і створіть тег на кшталт `v1.0.3`. Звичайний push у `main` не публікує розширення у Chrome Web Store.
 
