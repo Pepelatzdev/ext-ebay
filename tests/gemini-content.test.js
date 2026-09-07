@@ -26,12 +26,19 @@ function runFlow({ request, editor = document.createElement("div") }) {
 		return { success: true };
 	});
 	const chrome = { runtime: { sendMessage } };
-	new Function("chrome", "ECA", "ECAGeminiEditor", code)(
-		chrome,
-		ECA,
-		ECAGeminiEditor,
-	);
-	return { ECAGeminiEditor, sendMessage };
+	const ECAGeminiAttachments = {
+		attachFile: vi.fn(async () => ({ ok: true })),
+	};
+	const ECAPhotoTransfer = { fromBase64: vi.fn(() => new Uint8Array()) };
+	new Function(
+		"chrome",
+		"ECA",
+		"ECAGeminiEditor",
+		"ECAGeminiAttachments",
+		"ECAPhotoTransfer",
+		code,
+	)(chrome, ECA, ECAGeminiEditor, ECAGeminiAttachments, ECAPhotoTransfer);
+	return { ECAGeminiEditor, ECAGeminiAttachments, sendMessage };
 }
 
 async function finishChatPolling() {
@@ -82,6 +89,28 @@ describe("Gemini tab request flow", () => {
 		});
 		await finishChatPolling();
 		expect(ECAGeminiEditor.insertPrompt).not.toHaveBeenCalled();
+		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
+			{ type: "CLAIM_GEMINI_REQUEST" },
+			{
+				type: "SAVE_GEMINI_REPORT",
+				url: "https://gemini.google.com/gem/example/chat-id",
+			},
+		]);
+	});
+
+	it("does not reattach photos when a waiting request is claimed again", async () => {
+		setUrl("https://gemini.google.com/gem/example/chat-id");
+		const { ECAGeminiAttachments, sendMessage } = runFlow({
+			request: {
+				state: "waiting_for_chat",
+				requestId: "request-1",
+				itemId: "123",
+				targetUrl: "https://gemini.google.com/gem/example",
+				photos: [{ photoId: "photo-1" }],
+			},
+		});
+		await finishChatPolling();
+		expect(ECAGeminiAttachments.attachFile).not.toHaveBeenCalled();
 		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{

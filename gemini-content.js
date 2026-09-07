@@ -158,9 +158,10 @@
 				request.requestId ? { requestId: request.requestId } : {},
 			);
 			if (!ack?.success) return;
+			request.state = request.photos?.length ? "attaching" : "waiting_for_chat";
 			status("Text inserted");
 		}
-		if (request.photos?.length) {
+		if (request.photos?.length && request.state === "attaching") {
 			request.editor = editor;
 			const attachments = await attachSelectedPhotos(request);
 			if (!attachments.success) {
