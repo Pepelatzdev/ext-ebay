@@ -67,7 +67,8 @@ var ECAMessageValidation = (() => {
 
 	function validateStart(message, sender) {
 		if (
-			!exactKeys(message, ["type", "itemId", "prompt", "url"]) ||
+			(!exactKeys(message, ["type", "itemId", "prompt", "url"]) &&
+				!exactKeys(message, ["type", "itemId", "prompt", "url", "photos"])) ||
 			message.type !== ECA.MESSAGE.START
 		) {
 			return { ok: false, error: "Unexpected request fields" };
@@ -86,7 +87,38 @@ var ECAMessageValidation = (() => {
 		if (!ECA.isGeminiGemUrl(message.url)) {
 			return { ok: false, error: "Invalid Gemini URL" };
 		}
+		if (message.photos !== undefined) {
+			if (
+				!Array.isArray(message.photos) ||
+				message.photos.length > ECA.PHOTO_LIMIT
+			) {
+				return { ok: false, error: "Invalid photo selection" };
+			}
+			const seen = new Set();
+			for (const photo of message.photos) {
+				if (
+					!photo ||
+					typeof photo.photoId !== "string" ||
+					seen.has(photo.photoId) ||
+					!isAllowedPhotoUrl(photo.sourceUrl)
+				) {
+					return { ok: false, error: "Invalid photo selection" };
+				}
+				seen.add(photo.photoId);
+			}
+		}
 		return { ok: true };
+	}
+
+	function isAllowedPhotoUrl(rawUrl) {
+		try {
+			const url = new URL(rawUrl);
+			return (
+				url.protocol === "https:" && ECA.PHOTO_HOSTS.includes(url.hostname)
+			);
+		} catch {
+			return false;
+		}
 	}
 
 	function validateGemini(message, sender, type) {
@@ -94,7 +126,17 @@ var ECAMessageValidation = (() => {
 			return { ok: false, error: "Disallowed sender" };
 		}
 		const allowed =
-			type === ECA.MESSAGE.SAVE_REPORT ? ["type", "url"] : ["type"];
+			type === ECA.MESSAGE.SAVE_REPORT
+				? ["type", "url"]
+				: type === ECA.MESSAGE.PREPARE_PHOTOS
+					? ["type", "requestId"]
+					: type === ECA.MESSAGE.GET_PHOTO_CHUNK
+						? ["type", "requestId", "photoId", "chunkIndex"]
+						: type === ECA.MESSAGE.PHOTO_READY
+							? ["type", "requestId", "photoId"]
+							: type === ECA.MESSAGE.RETRY_PHOTOS
+								? ["type", "requestId", "photoIds"]
+								: ["type"];
 		if (!exactKeys(message, allowed)) {
 			return { ok: false, error: "Unexpected request fields" };
 		}
@@ -103,6 +145,32 @@ var ECAMessageValidation = (() => {
 			!ECA.isGeminiReportUrl(message.url)
 		) {
 			return { ok: false, error: "Invalid report URL" };
+		}
+		if (
+			[
+				ECA.MESSAGE.PREPARE_PHOTOS,
+				ECA.MESSAGE.GET_PHOTO_CHUNK,
+				ECA.MESSAGE.PHOTO_READY,
+				ECA.MESSAGE.RETRY_PHOTOS,
+			].includes(type) &&
+			typeof message.requestId !== "string"
+		) {
+			return { ok: false, error: "Invalid request ID" };
+		}
+		if (
+			type === ECA.MESSAGE.GET_PHOTO_CHUNK &&
+			(typeof message.photoId !== "string" ||
+				!Number.isInteger(message.chunkIndex) ||
+				message.chunkIndex < 0)
+		) {
+			return { ok: false, error: "Invalid photo chunk" };
+		}
+		if (
+			type === ECA.MESSAGE.RETRY_PHOTOS &&
+			(!Array.isArray(message.photoIds) ||
+				message.photoIds.some((id) => typeof id !== "string"))
+		) {
+			return { ok: false, error: "Invalid photo retry" };
 		}
 		return { ok: true };
 	}
@@ -122,6 +190,7 @@ var ECAMessageValidation = (() => {
 	return {
 		EBAY_DOMAINS,
 		isAllowedDescriptionUrl,
+		isAllowedPhotoUrl,
 		isGeminiSender,
 		isSafeGeminiUrl,
 		validateDescription,

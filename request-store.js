@@ -8,9 +8,28 @@ var ECARequestStore = (() => {
 
 	async function create(
 		tabId,
-		{ itemId, prompt, targetUrl, createdAt = Date.now() },
+		{
+			requestId = `${tabId}-${Date.now()}`,
+			itemId,
+			prompt,
+			targetUrl,
+			photos = [],
+			createdAt = Date.now(),
+		},
 	) {
-		const request = { itemId, prompt, targetUrl, createdAt, state: "pending" };
+		const request = photos.length
+			? {
+					requestId,
+					itemId,
+					prompt,
+					targetUrl,
+					photos,
+					completedPhotoIds: [],
+					failedPhotoIds: [],
+					createdAt,
+					state: "pending",
+				}
+			: { itemId, prompt, targetUrl, createdAt, state: "pending" };
 		await chrome.storage.session.set({ [key(tabId)]: request });
 		chrome.alarms.create(alarm(tabId), {
 			when: createdAt + ECA.PENDING_PROMPT_TTL_MS,
@@ -21,11 +40,18 @@ var ECARequestStore = (() => {
 	async function get(tabId) {
 		const request = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
 		if (!request) return undefined;
+		const ttl = request.preparedAt
+			? ECA.PREPARED_REQUEST_TTL_MS
+			: ECA.PENDING_PROMPT_TTL_MS;
 		const age = Date.now() - request.createdAt;
+		const reference = request.preparedAt || request.createdAt;
+		const lifetime = Date.now() - reference;
 		if (
 			!Number.isFinite(request.createdAt) ||
 			age < 0 ||
-			age >= ECA.PENDING_PROMPT_TTL_MS
+			!Number.isFinite(reference) ||
+			lifetime < 0 ||
+			lifetime >= ttl
 		) {
 			await remove(tabId);
 			return undefined;
@@ -36,12 +62,28 @@ var ECARequestStore = (() => {
 	async function markInserted(tabId) {
 		const request = await get(tabId);
 		if (request?.state !== "pending") return null;
-		const updated = {
-			itemId: request.itemId,
-			targetUrl: request.targetUrl,
-			createdAt: request.createdAt,
-			state: "waiting_for_chat",
-		};
+		const updated = request.photos?.length
+			? {
+					...request,
+					prompt: undefined,
+					preparedAt: Date.now(),
+					state: "attaching",
+				}
+			: {
+					itemId: request.itemId,
+					targetUrl: request.targetUrl,
+					createdAt: request.createdAt,
+					state: "waiting_for_chat",
+				};
+		delete updated.prompt;
+		await chrome.storage.session.set({ [key(tabId)]: updated });
+		return updated;
+	}
+
+	async function update(tabId, changes) {
+		const request = await get(tabId);
+		if (!request) return null;
+		const updated = { ...request, ...changes };
 		await chrome.storage.session.set({ [key(tabId)]: updated });
 		return updated;
 	}
@@ -57,5 +99,5 @@ var ECARequestStore = (() => {
 		return Number.isInteger(tabId) ? tabId : null;
 	}
 
-	return { create, get, markInserted, remove, tabIdFromAlarm };
+	return { create, get, markInserted, remove, tabIdFromAlarm, update };
 })();
