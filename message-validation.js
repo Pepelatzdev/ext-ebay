@@ -128,15 +128,18 @@ var ECAMessageValidation = (() => {
 		const allowed =
 			type === ECA.MESSAGE.SAVE_REPORT
 				? ["type", "url"]
-				: type === ECA.MESSAGE.PREPARE_PHOTOS
+				: type === ECA.MESSAGE.ACK_INSERTED &&
+						exactKeys(message, ["type", "requestId"])
 					? ["type", "requestId"]
-					: type === ECA.MESSAGE.GET_PHOTO_CHUNK
-						? ["type", "requestId", "photoId", "chunkIndex"]
-						: type === ECA.MESSAGE.PHOTO_READY
-							? ["type", "requestId", "photoId"]
-							: type === ECA.MESSAGE.RETRY_PHOTOS
-								? ["type", "requestId", "photoIds"]
-								: ["type"];
+					: type === ECA.MESSAGE.PREPARE_PHOTOS
+						? ["type", "requestId"]
+						: type === ECA.MESSAGE.GET_PHOTO_CHUNK
+							? ["type", "requestId", "photoId", "chunkIndex"]
+							: type === ECA.MESSAGE.PHOTO_READY
+								? ["type", "requestId", "photoId"]
+								: type === ECA.MESSAGE.RETRY_PHOTOS
+									? ["type", "requestId", "photoIds"]
+									: ["type"];
 		if (!exactKeys(message, allowed)) {
 			return { ok: false, error: "Unexpected request fields" };
 		}

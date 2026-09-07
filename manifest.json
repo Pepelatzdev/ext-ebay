@@ -41,7 +41,13 @@
 		},
 		{
 			"matches": ["https://gemini.google.com/*"],
-			"js": ["config.js", "gemini-editor.js", "gemini-content.js"],
+			"js": [
+				"config.js",
+				"photo-transfer.js",
+				"gemini-editor.js",
+				"gemini-attachments.js",
+				"gemini-content.js"
+			],
 			"run_at": "document_idle"
 		}
 	],

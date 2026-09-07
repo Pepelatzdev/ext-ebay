@@ -23,6 +23,15 @@ describe("Gemini editor adapter", () => {
 		expect(editor.textContent).toContain("Hello Gemini");
 	});
 
+	it("does not overwrite a non-empty editor", () => {
+		document.body.innerHTML =
+			'<div contenteditable="true" role="textbox">Existing draft</div>';
+		const editor = document.querySelector("div");
+		editor.getBoundingClientRect = () => ({ width: 100, height: 40 });
+		expect(editorApi().insertPrompt(editor, "New prompt")).toBe(false);
+		expect(editor.textContent).toBe("Existing draft");
+	});
+
 	it("rejects an editor that retains only the prompt prefix", () => {
 		document.body.innerHTML =
 			'<div contenteditable="true" role="textbox"></div>';

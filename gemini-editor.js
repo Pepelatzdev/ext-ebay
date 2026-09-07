@@ -87,6 +87,7 @@ var ECAGeminiEditor = (() => {
 	}
 
 	function insertPrompt(editor, prompt) {
+		if (editorText(editor).trim()) return false;
 		editor.focus();
 		try {
 			const range = document.createRange();
@@ -110,5 +111,5 @@ var ECAGeminiEditor = (() => {
 		return comparableText(editorText(editor)) === comparableText(prompt);
 	}
 
-	return { findEditor, insertPrompt, waitForEditor };
+	return { editorText, findEditor, insertPrompt, waitForEditor };
 })();
