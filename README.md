@@ -181,19 +181,19 @@ npm run verify:package
 - `pages.yml` незалежно публікує `index.html` і `privacy.html` у GitHub Pages після push у `main` або ручного запуску;
 - `release.yml` публікує розширення лише для тегів `v*` або після ручного запуску з указаною версією, повторюючи всі quality gates перед публікацією.
 
-Публікація у Chrome Web Store використовує API V2 та OAuth Refresh Token. Для environment `chrome-web-store` потрібно створити repository/environment secrets:
+Публікація у Chrome Web Store використовує API V2 та OAuth Refresh Token. Для environment `development` потрібно створити repository/environment secrets:
 
 - `CHROME_CLIENT_ID`;
 - `CHROME_CLIENT_SECRET`;
 - `CHROME_REFRESH_TOKEN`;
-- `CHROME_PUBLISHER_ID`;
+- `CHROME_PUBLISHER_ID` — environment variable (також підтримується secret);
 - `CHROME_EXTENSION_ID`.
 
 Одноразове налаштування репозиторію:
 
 1. У **Settings → Pages → Build and deployment → Source** виберіть **GitHub Actions**.
-2. У **Settings → Environments** створіть environment `chrome-web-store` і додайте до нього перелічені secrets.
-3. За потреби увімкніть required reviewers для `chrome-web-store`, щоб кожна публікація потребувала ручного підтвердження.
+2. У **Settings → Environments** використовуйте наявне environment `development`, де зберігаються секрети публікації, і додайте відсутні значення.
+3. За потреби увімкніть required reviewers для `development`, щоб кожна публікація потребувала ручного підтвердження.
 
 Для релізу синхронізуйте версію в усіх файлах, виконайте повний локальний набір перевірок і створіть тег на кшталт `v1.0.3`. Звичайний push у `main` не публікує розширення у Chrome Web Store.
 
