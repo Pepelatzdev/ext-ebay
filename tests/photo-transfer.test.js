@@ -78,3 +78,12 @@ describe("photo transfer", () => {
 		);
 	});
 });
+
+it("rejects an empty download", async () => {
+	const result = await transfer.downloadSelected(
+		[{ photoId: "empty", sourceUrl: "https://i.ebayimg.com/empty.jpg" }],
+		async () => response(new Uint8Array()),
+	);
+	expect(result.succeeded).toEqual([]);
+	expect(result.failed[0].code).toBe("PHOTO_EMPTY");
+});

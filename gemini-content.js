@@ -5,7 +5,7 @@
  * editor adapter, ACKs it, and asks the service worker to persist the chat URL.
  */
 
-/* global chrome, ECA, ECAGeminiEditor, ECAGeminiAttachments */
+/* global chrome, ECA, ECAGeminiEditor, ECAGeminiAttachments, ECAPhotoTransfer */
 (() => {
 	function status(text, type = "info") {
 		let element = document.getElementById("eca-gemini-status");
@@ -77,7 +77,22 @@
 				bytes.set(part, offset);
 				offset += part.length;
 			}
-			const file = new File([bytes], `${photo.photoId}.image`, {
+			if (!size || size !== photo.size) {
+				failed.push(photo.photoId);
+				continue;
+			}
+			const extension = {
+				"image/jpeg": "jpg",
+				"image/png": "png",
+				"image/webp": "webp",
+				"image/gif": "gif",
+				"image/avif": "avif",
+			}[photo.mimeType];
+			if (!extension) {
+				failed.push(photo.photoId);
+				continue;
+			}
+			const file = new File([bytes], `${photo.photoId}.${extension}`, {
 				type: photo.mimeType,
 			});
 			const attached = await ECAGeminiAttachments.attachFile(

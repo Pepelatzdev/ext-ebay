@@ -71,6 +71,9 @@ var ECAPhotoTransfer = (() => {
 			if (!mimeType.startsWith("image/"))
 				throw new Error("PHOTO_MIME_NOT_ALLOWED");
 			const bytes = await readBytes(response);
+			if (!bytes.length) throw new Error("PHOTO_EMPTY");
+			if (bytes.length > ECA.MAX_PHOTO_BYTES)
+				throw new Error("PHOTO_TOO_LARGE");
 			return { photoId: photo.photoId, mimeType, size: bytes.length, bytes };
 		} finally {
 			clearTimeout(timer);

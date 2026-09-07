@@ -1,50 +1,63 @@
-/* global ECA */
 /* biome-ignore-all lint/correctness/noUnusedVariables: Gemini content-script global */
 var ECAGeminiAttachments = (() => {
-	function selectors() {
-		return [
-			'img[alt*="attachment" i]',
-			'[aria-label*="attachment" i]',
-			'[data-test-id*="attachment" i]',
-		];
-	}
+	const IMAGE_SELECTOR =
+		'img[data-test-id="uploaded-img"], img.preview-image, img.gem-attachment-style-img';
 
-	function hasAttachment() {
-		return selectors().some((selector) => document.querySelector(selector));
-	}
-
-	function waitForAttachment(timeoutMs = 15_000) {
-		if (hasAttachment()) return Promise.resolve(true);
+	function waitForAttachment(root, previous, timeoutMs = 15_000) {
 		return new Promise((resolve) => {
-			const observer = new MutationObserver(() => {
-				if (!hasAttachment()) return;
+			const observer = new MutationObserver(check);
+			const timer = setTimeout(() => finish(false), timeoutMs);
+			function finish(value) {
 				observer.disconnect();
 				clearTimeout(timer);
-				resolve(true);
-			});
-			const timer = setTimeout(() => {
-				observer.disconnect();
-				resolve(false);
-			}, timeoutMs);
-			observer.observe(document.documentElement, {
+				root.removeEventListener("load", check, true);
+				resolve(value);
+			}
+			function check() {
+				const ready = Array.from(root.querySelectorAll(IMAGE_SELECTOR)).some(
+					(image) =>
+						!previous.has(image) &&
+						image.getAttribute("src") &&
+						image.complete &&
+						image.naturalWidth > 0 &&
+						image.naturalHeight > 0,
+				);
+				if (
+					ready &&
+					!root.querySelector('[role="progressbar"], [aria-busy="true"]')
+				)
+					finish(true);
+			}
+			observer.observe(root, {
 				childList: true,
 				subtree: true,
 				attributes: true,
 			});
+			root.addEventListener("load", check, true);
+			check();
 		});
 	}
 
 	async function attachFile(editor, file, identity, options = {}) {
+		const root = editor.closest("input-container") || editor.parentElement;
+		if (!root || !file.size)
+			return { ok: false, status: "failed", photoId: identity };
+		const previous = new Set(root.querySelectorAll(IMAGE_SELECTOR));
 		const dataTransfer = new DataTransfer();
 		dataTransfer.items.add(file);
 		editor.focus();
 		editor.dispatchEvent(
 			new ClipboardEvent("paste", {
 				bubbles: true,
+				cancelable: true,
+				composed: true,
 				clipboardData: dataTransfer,
 			}),
 		);
-		const accepted = await (options.waitForAttachment || waitForAttachment)();
+		const accepted = await (options.waitForAttachment || waitForAttachment)(
+			root,
+			previous,
+		);
 		return accepted
 			? { ok: true, status: "attached", photoId: identity }
 			: {

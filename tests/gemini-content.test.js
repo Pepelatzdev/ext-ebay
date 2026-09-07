@@ -14,12 +14,14 @@ function setUrl(url) {
 	});
 }
 
-function runFlow({ request, editor = document.createElement("div") }) {
+function runFlow({ request, editor = document.createElement("div"), respond }) {
 	const ECAGeminiEditor = {
 		waitForEditor: vi.fn(async () => editor),
 		insertPrompt: vi.fn(() => true),
 	};
 	const sendMessage = vi.fn(async (message) => {
+		const response = respond?.(message);
+		if (response) return response;
 		if (message.type === ECA.MESSAGE.CLAIM) {
 			return request ? { success: true, request } : { success: true };
 		}
@@ -29,7 +31,9 @@ function runFlow({ request, editor = document.createElement("div") }) {
 	const ECAGeminiAttachments = {
 		attachFile: vi.fn(async () => ({ ok: true })),
 	};
-	const ECAPhotoTransfer = { fromBase64: vi.fn(() => new Uint8Array()) };
+	const ECAPhotoTransfer = {
+		fromBase64: (value) => Uint8Array.from(atob(value), (c) => c.charCodeAt(0)),
+	};
 	new Function(
 		"chrome",
 		"ECA",
@@ -141,4 +145,59 @@ describe("Gemini tab request flow", () => {
 			expect.objectContaining({ type: ECA.MESSAGE.SAVE_REPORT }),
 		);
 	});
+});
+
+describe("photo reconstruction", () => {
+	it.each([3, 0, 4])(
+		"checks received bytes against the declared size %s",
+		async (size) => {
+			const { ECAGeminiAttachments, sendMessage } = runFlow({
+				request: {
+					state: "attaching",
+					requestId: "r1",
+					photos: [{ photoId: "p1" }],
+					targetUrl: "https://gemini.google.com/gem/example",
+				},
+				respond: (message) => {
+					if (message.type === ECA.MESSAGE.PREPARE_PHOTOS)
+						return {
+							success: true,
+							photos: [{ photoId: "p1", mimeType: "image/jpeg", size }],
+						};
+					if (message.type === ECA.MESSAGE.GET_PHOTO_CHUNK)
+						return {
+							success: true,
+							data: btoa(String.fromCharCode(0, 128, 255)),
+							last: true,
+						};
+				},
+			});
+			await vi.advanceTimersByTimeAsync(0);
+			if (size === 3) {
+				const file = ECAGeminiAttachments.attachFile.mock.calls[0][1];
+				expect(file.name).toBe("p1.jpg");
+				expect(file.type).toBe("image/jpeg");
+				expect(file.size).toBe(3);
+				vi.clearAllTimers();
+				vi.useRealTimers();
+				const reader = new FileReader();
+				const result = new Promise(
+					(resolve) =>
+						(reader.onload = () => resolve(new Uint8Array(reader.result))),
+				);
+				reader.readAsArrayBuffer(file);
+				expect(Array.from(await result)).toEqual([0, 128, 255]);
+				expect(sendMessage).toHaveBeenCalledWith({
+					type: ECA.MESSAGE.PHOTO_READY,
+					requestId: "r1",
+					photoId: "p1",
+				});
+			} else {
+				expect(ECAGeminiAttachments.attachFile).not.toHaveBeenCalled();
+				expect(sendMessage).not.toHaveBeenCalledWith(
+					expect.objectContaining({ type: ECA.MESSAGE.PHOTO_READY }),
+				);
+			}
+		},
+	);
 });
