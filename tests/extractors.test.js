@@ -209,7 +209,7 @@ describe("extractAuctionData", () => {
 	it("handles missing price elements gracefully", () => {
 		document.body.innerHTML = "<div>No price here</div>";
 		const result = extractAuctionData();
-		expect(result.type).toBe("Buy It Now");
+		expect(result.type).toBe("Unknown");
 		expect(result.bidPrice).toBe("");
 		expect(result.binPrice).toBe("");
 	});

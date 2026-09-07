@@ -77,6 +77,13 @@ var ECARequestStore = (() => {
 				};
 		delete updated.prompt;
 		await chrome.storage.session.set({ [key(tabId)]: updated });
+		chrome.alarms.create(alarm(tabId), {
+			when:
+				(updated.preparedAt || updated.createdAt) +
+				(updated.preparedAt
+					? ECA.PREPARED_REQUEST_TTL_MS
+					: ECA.PENDING_PROMPT_TTL_MS),
+		});
 		return updated;
 	}
 

@@ -47,15 +47,16 @@ function extractAuctionData() {
 		!!document.querySelector(S.bidButton) ||
 		!!document.querySelector(S.viewBids);
 	const hasBinBtn = !!document.querySelector(S.binButton);
+	const defaultPriceEl = queryFirst(S.pricePrimary);
 
-	let type = "Buy It Now";
+	let type = "Unknown";
 	if (isAuction && hasBinBtn) {
 		type = "Auction with Buy It Now";
 	} else if (isAuction) {
 		type = "Auction";
+	} else if (hasBinBtn || defaultPriceEl) {
+		type = "Buy It Now";
 	}
-
-	const defaultPriceEl = queryFirst(S.pricePrimary);
 
 	let bidPrice = "";
 	let binPrice = "";
@@ -264,6 +265,10 @@ function appendBoundedDescription(basePrompt, rawDescription) {
 function formatPrompt(preamble, data) {
 	const clean = normalizePromptText;
 	const lines = [`${clean(preamble)}\n\n---`];
+	const missing = [];
+	if (!data.title) missing.push("title");
+	if (!data.bidPrice && !data.binPrice) missing.push("price");
+	if (!data.description) missing.push("description");
 	if (data.title) lines.push(`**Product:** ${clean(data.title)}`);
 	lines.push(`**URL:** ${window.location.href.split(/[?#]/)[0]}`);
 	lines.push(`**Listing Type:** ${clean(data.type)}`);
@@ -273,6 +278,7 @@ function formatPrompt(preamble, data) {
 	if (data.shipping) lines.push(`**Shipping:** ${clean(data.shipping)}`);
 	if (data.condition) lines.push(`**Condition:** ${clean(data.condition)}`);
 	if (data.returns) lines.push(`**Returns:** ${clean(data.returns)}`);
+	if (missing.length) lines.push(`\n**Missing data:** ${missing.join(", ")}`);
 
 	if (data.seller.name) {
 		const feedback = data.seller.feedback
