@@ -5,7 +5,7 @@
  * Depends on ECA (config.js) and extractor functions (extractors.js).
  */
 
-/* global ECA, extractItemId, extractTitle, extractAuctionData, extractCondition,
+/* global ECA, ECAGalleryExtractor, ECAPhotoPicker, extractItemId, extractTitle, extractAuctionData, extractCondition,
           extractItemSpecifics, extractShipping, extractReturns, extractSellerInfo,
           extractSellerReviews, extractDescription, formatPrompt */
 
@@ -156,6 +156,22 @@ function handleAskGemini(btn, itemId) {
 async function requestGemini(btn, itemId) {
 	setBusy(btn, true);
 	try {
+		const gallery =
+			typeof ECAGalleryExtractor === "undefined"
+				? { photos: [] }
+				: ECAGalleryExtractor.collectGalleryPhotos(document);
+		const selection =
+			typeof ECAPhotoPicker === "undefined"
+				? { confirmed: true, selectedPhotoIds: [] }
+				: await ECAPhotoPicker.open({
+						title: extractTitle(),
+						photos: gallery.photos,
+						limit: ECA.PHOTO_LIMIT,
+					});
+		if (!selection.confirmed) {
+			setBusy(btn, false);
+			return;
+		}
 		const data = {
 			title: extractTitle(),
 			...extractAuctionData(),
@@ -188,6 +204,9 @@ async function requestGemini(btn, itemId) {
 			itemId,
 			prompt: promptText,
 			url: geminiUrl || ECA.DEFAULT_GEMINI_URL,
+			photos: gallery.photos.filter((photo) =>
+				selection.selectedPhotoIds.includes(photo.photoId),
+			),
 		});
 
 		if (!response?.success) {
