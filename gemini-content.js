@@ -54,6 +54,7 @@
 		}
 		const failed = [...(prepared.failed || []).map((photo) => photo.photoId)];
 		let completed = 0;
+		const batch = [];
 		for (const photo of prepared.photos || []) {
 			const parts = [];
 			for (let chunkIndex = 0; ; chunkIndex += 1) {
@@ -95,21 +96,29 @@
 			const file = new File([bytes], `${photo.photoId}.${extension}`, {
 				type: photo.mimeType,
 			});
-			const attached = await ECAGeminiAttachments.attachFile(
+			batch.push({ photo, file });
+		}
+		if (batch.length) {
+			const attached = await ECAGeminiAttachments.attachFiles(
 				request.editor,
-				file,
-				photo.photoId,
+				batch.map(({ file }) => file),
 			);
 			if (!attached.ok) {
-				failed.push(photo.photoId);
-				continue;
+				// A partial batch cannot be retried safely without duplicating previews.
+				status(
+					"Could not confirm all photos. Check Gemini attachments before sending manually.",
+					"error",
+				);
+				return { success: false, failed: [], uncertain: true };
 			}
-			await send(ECA.MESSAGE.PHOTO_READY, {
-				requestId: request.requestId,
-				photoId: photo.photoId,
-			});
-			completed += 1;
-			status(`Added ${completed} of ${request.photos.length} photos`);
+			for (const { photo } of batch) {
+				await send(ECA.MESSAGE.PHOTO_READY, {
+					requestId: request.requestId,
+					photoId: photo.photoId,
+				});
+				completed += 1;
+			}
+			status(`Added ${completed} photos`);
 		}
 		if (failed.length) status(`Some photos failed (${failed.length})`, "error");
 		return { success: failed.length === 0, failed };
@@ -145,8 +154,21 @@
 		});
 	}
 
-	async function waitAndSave(request) {
-		status("Ready to send", "success");
+	async function waitAndSave(request, autoSend = false) {
+		if (autoSend) {
+			if (await ECAGeminiEditor.submitPrompt(request.editor)) {
+				status("Message sent", "success");
+			} else {
+				status(
+					"Could not send automatically. Send the message in Gemini.",
+					"error",
+				);
+			}
+		} else {
+			status(
+				"Check the message and send it in Gemini. Waiting for the report link.",
+			);
+		}
 		const chatUrl = await waitForChatUrl(request.targetUrl);
 		if (chatUrl) {
 			const saved = await send(ECA.MESSAGE.SAVE_REPORT, { url: chatUrl });
@@ -157,6 +179,28 @@
 		}
 	}
 
+	function showPhotoRecovery(request, failed, autoSend) {
+		status(
+			`Some photos failed (${failed.length}). Check the text and attachments before continuing.`,
+			"error",
+		);
+		statusAction("Retry failed photos", async () => {
+			// Remove both controls while retrying so Continue cannot race with it.
+			const retry = await attachSelectedPhotos(request, failed);
+			if (retry.uncertain) return;
+			if (retry.success) await waitAndSave(request, autoSend);
+			else showPhotoRecovery(request, retry.failed, autoSend);
+		});
+		statusAction("Continue without failed photos", async () => {
+			status("Continuing without failed photos…");
+			const continued = await send(ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS, {
+				requestId: request.requestId,
+			});
+			if (continued?.success) await waitAndSave(request, autoSend);
+			else showPhotoRecovery(request, failed, autoSend);
+		});
+	}
+
 	async function run() {
 		const editor = await ECAGeminiEditor.waitForEditor();
 		if (!editor) return;
@@ -164,6 +208,12 @@
 		const claimed = await send(ECA.MESSAGE.CLAIM);
 		const request = claimed?.request;
 		if (!claimed?.success || !request) return;
+		request.editor = editor;
+		const autoSend = request.state === "pending";
+		if (request.state === "failed_partial") {
+			showPhotoRecovery(request, request.failedPhotoIds || [], false);
+			return;
+		}
 
 		if (request.state === "pending") {
 			status("Inserting text…");
@@ -180,32 +230,12 @@
 			request.editor = editor;
 			const attachments = await attachSelectedPhotos(request);
 			if (!attachments.success) {
-				statusAction("Retry failed photos", async () => {
-					const retry = await attachSelectedPhotos(request, attachments.failed);
-					if (retry.success) {
-						await waitAndSave(request);
-						return;
-					}
-					status(`Some photos failed (${retry.failed.length})`, "error");
-					statusAction("Continue without failed photos", async () => {
-						const continued = await send(
-							ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
-							{ requestId: request.requestId },
-						);
-						if (continued?.success) await waitAndSave(request);
-					});
-				});
-				statusAction("Continue without failed photos", async () => {
-					const continued = await send(
-						ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
-						{ requestId: request.requestId },
-					);
-					if (continued?.success) await waitAndSave(request);
-				});
+				if (attachments.uncertain) return;
+				showPhotoRecovery(request, attachments.failed, autoSend);
 				return;
 			}
 		}
-		await waitAndSave(request);
+		await waitAndSave(request, autoSend);
 	}
 
 	run().catch((error) => {

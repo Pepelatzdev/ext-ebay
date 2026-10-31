@@ -16,6 +16,11 @@ importScripts(
 /* global chrome, ECA, ECAMessageValidation, ECAReportStore, ECARequestStore */
 
 const attachmentCache = new Map();
+ECARequestStore.onRemoved((request) => {
+	for (const photo of request?.photos || []) {
+		attachmentCache.delete(`${request.requestId}:${photo.photoId}`);
+	}
+});
 
 async function fetchDescription(url) {
 	const controller = new AbortController();
@@ -92,6 +97,10 @@ async function handleMessage(message, sender) {
 			return { success: false, error: "No active photo preparation" };
 		}
 		const result = await ECAPhotoTransfer.downloadSelected(request.photos);
+		const active = await ECARequestStore.get(sender.tab.id);
+		if (!active || active.requestId !== request.requestId) {
+			return { success: false, error: "Photo request expired or closed" };
+		}
 		for (const photo of result.succeeded)
 			attachmentCache.set(`${message.requestId}:${photo.photoId}`, photo);
 		const updated = await ECARequestStore.update(sender.tab.id, {
@@ -101,6 +110,11 @@ async function handleMessage(message, sender) {
 					? "attaching"
 					: "failed_partial",
 		});
+		if (!updated) {
+			for (const photo of result.succeeded)
+				attachmentCache.delete(`${request.requestId}:${photo.photoId}`);
+			return { success: false, error: "Photo request expired or closed" };
+		}
 		return {
 			success: true,
 			requestId: updated.requestId,
@@ -159,6 +173,10 @@ async function handleMessage(message, sender) {
 			retryIds.has(photo.photoId),
 		);
 		const result = await ECAPhotoTransfer.downloadSelected(photos);
+		const active = await ECARequestStore.get(sender.tab.id);
+		if (!active || active.requestId !== request.requestId) {
+			return { success: false, error: "Photo request expired or closed" };
+		}
 		for (const photo of result.succeeded)
 			attachmentCache.set(`${message.requestId}:${photo.photoId}`, photo);
 		const failed = request.failedPhotoIds.filter(
@@ -166,7 +184,6 @@ async function handleMessage(message, sender) {
 		);
 		failed.push(...result.failed.map((photo) => photo.photoId));
 		const completed = new Set(request.completedPhotoIds);
-		for (const photo of result.succeeded) completed.add(photo.photoId);
 		const updated = await ECARequestStore.update(sender.tab.id, {
 			failedPhotoIds: [...new Set(failed)],
 			state: failed.length
@@ -175,6 +192,11 @@ async function handleMessage(message, sender) {
 					? "waiting_for_chat"
 					: "attaching",
 		});
+		if (!updated) {
+			for (const photo of result.succeeded)
+				attachmentCache.delete(`${request.requestId}:${photo.photoId}`);
+			return { success: false, error: "Photo request expired or closed" };
+		}
 		return {
 			success: true,
 			requestId: updated.requestId,
@@ -224,8 +246,9 @@ async function handleMessage(message, sender) {
 			...new Set([...request.completedPhotoIds, message.photoId]),
 		];
 		attachmentCache.delete(`${message.requestId}:${message.photoId}`);
-		const state =
-			completed.length === request.photos.length
+		const state = request.failedPhotoIds.length
+			? "failed_partial"
+			: completed.length === request.photos.length
 				? "waiting_for_chat"
 				: "attaching";
 		await ECARequestStore.update(sender.tab.id, {
@@ -271,14 +294,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	return true;
 });
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-	await ECARequestStore.get(tabId).then((request) => {
-		if (request)
-			for (const photo of request.photos || [])
-				attachmentCache.delete(`${request.requestId}:${photo.photoId}`);
-		return ECARequestStore.remove(tabId);
-	});
-});
+chrome.tabs.onRemoved.addListener((tabId) => ECARequestStore.remove(tabId));
 chrome.alarms.onAlarm.addListener((alarm) => {
 	const tabId = ECARequestStore.tabIdFromAlarm(alarm.name);
 	if (tabId !== null) return ECARequestStore.get(tabId);

@@ -23,6 +23,21 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 describe("Gemini attachment confirmation", () => {
+	it("requires every image in a batch before confirming", async () => {
+		const waiting = adapter.waitForAttachment(
+			document.body,
+			new Set(),
+			1000,
+			2,
+		);
+		const done = vi.fn();
+		waiting.then(done);
+		preview(document.body);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(done).not.toHaveBeenCalled();
+		preview(document.body);
+		await expect(waiting).resolves.toBe(true);
+	});
 	it("confirms a new loaded preview with Ukrainian labels without a fixed delay", async () => {
 		const waiting = adapter.waitForAttachment(document.body, new Set());
 		preview(document.body);

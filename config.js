@@ -13,7 +13,7 @@ var ECA = {
 	// ── Defaults ──────────────────────────────────────────────
 	DEFAULT_PREAMBLE:
 		"Ось інформація про товар з eBay. Допоможи мені оцінити цю пропозицію:",
-	DEFAULT_GEMINI_URL: "https://gemini.google.com/gem/cb9c9074ac8d",
+	DEFAULT_GEMINI_URL: "https://gemini.google.com/app",
 
 	// ── Security ──────────────────────────────────────────────
 	GEMINI_HOST: "gemini.google.com",
@@ -118,7 +118,9 @@ ECA.isGeminiGemUrl = (rawUrl) => {
 		return (
 			url.protocol === "https:" &&
 			url.hostname === ECA.GEMINI_HOST &&
-			/^\/gem\/[^/]+\/?$/.test(url.pathname)
+			!url.username &&
+			!url.password &&
+			!url.port
 		);
 	} catch {
 		return false;

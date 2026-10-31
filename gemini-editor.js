@@ -111,5 +111,26 @@ var ECAGeminiEditor = (() => {
 		return comparableText(editorText(editor)) === comparableText(prompt);
 	}
 
-	return { editorText, findEditor, insertPrompt, waitForEditor };
+	async function submitPrompt(editor, timeoutMs = 15_000) {
+		const deadline = Date.now() + timeoutMs;
+		while (Date.now() < deadline) {
+			const root = editor?.closest("input-container") || editor?.parentElement;
+			const button = root?.querySelector(
+				'button.send-button, button[data-test-id="send-button"], button[aria-label="Send message"], button[aria-label="Надіслати повідомлення"]',
+			);
+			if (
+				button &&
+				!button.disabled &&
+				button.getAttribute("aria-disabled") !== "true" &&
+				!root.querySelector('[role="progressbar"], [aria-busy="true"]')
+			) {
+				button.click();
+				return true;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+		return false;
+	}
+
+	return { submitPrompt, editorText, findEditor, insertPrompt, waitForEditor };
 })();

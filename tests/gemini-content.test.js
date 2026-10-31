@@ -14,8 +14,14 @@ function setUrl(url) {
 	});
 }
 
-function runFlow({ request, editor = document.createElement("div"), respond }) {
+function runFlow({
+	request,
+	editor = document.createElement("div"),
+	respond,
+	submit = true,
+}) {
 	const ECAGeminiEditor = {
+		submitPrompt: vi.fn(async () => submit),
 		waitForEditor: vi.fn(async () => editor),
 		insertPrompt: vi.fn(() => true),
 	};
@@ -29,7 +35,7 @@ function runFlow({ request, editor = document.createElement("div"), respond }) {
 	});
 	const chrome = { runtime: { sendMessage } };
 	const ECAGeminiAttachments = {
-		attachFile: vi.fn(async () => ({ ok: true })),
+		attachFiles: vi.fn(async () => ({ ok: true })),
 	};
 	const ECAPhotoTransfer = {
 		fromBase64: (value) => Uint8Array.from(atob(value), (c) => c.charCodeAt(0)),
@@ -51,6 +57,7 @@ async function finishChatPolling() {
 }
 
 beforeEach(() => {
+	document.body.replaceChildren();
 	vi.useFakeTimers();
 	setUrl("https://gemini.google.com/gem/example");
 });
@@ -61,7 +68,7 @@ afterEach(() => {
 
 describe("Gemini tab request flow", () => {
 	it("claims, inserts, ACKs and saves a pending request in order", async () => {
-		const { sendMessage } = runFlow({
+		const { sendMessage, ECAGeminiEditor } = runFlow({
 			request: {
 				state: "pending",
 				itemId: "123",
@@ -72,6 +79,7 @@ describe("Gemini tab request flow", () => {
 		for (let index = 0; index < 5; index++) await Promise.resolve();
 		setUrl("https://gemini.google.com/gem/example/chat-id");
 		await finishChatPolling();
+		expect(ECAGeminiEditor.submitPrompt).toHaveBeenCalledTimes(1);
 		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{ type: "ACK_PROMPT_INSERTED" },
@@ -93,6 +101,7 @@ describe("Gemini tab request flow", () => {
 		});
 		await finishChatPolling();
 		expect(ECAGeminiEditor.insertPrompt).not.toHaveBeenCalled();
+		expect(ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
 		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{
@@ -114,7 +123,7 @@ describe("Gemini tab request flow", () => {
 			},
 		});
 		await finishChatPolling();
-		expect(ECAGeminiAttachments.attachFile).not.toHaveBeenCalled();
+		expect(ECAGeminiAttachments.attachFiles).not.toHaveBeenCalled();
 		expect(sendMessage.mock.calls.map(([message]) => message)).toEqual([
 			{ type: "CLAIM_GEMINI_REQUEST" },
 			{
@@ -174,7 +183,7 @@ describe("photo reconstruction", () => {
 			});
 			await vi.advanceTimersByTimeAsync(0);
 			if (size === 3) {
-				const file = ECAGeminiAttachments.attachFile.mock.calls[0][1];
+				const file = ECAGeminiAttachments.attachFiles.mock.calls[0][1][0];
 				expect(file.name).toBe("p1.jpg");
 				expect(file.type).toBe("image/jpeg");
 				expect(file.size).toBe(3);
@@ -193,11 +202,57 @@ describe("photo reconstruction", () => {
 					photoId: "p1",
 				});
 			} else {
-				expect(ECAGeminiAttachments.attachFile).not.toHaveBeenCalled();
+				expect(ECAGeminiAttachments.attachFiles).not.toHaveBeenCalled();
 				expect(sendMessage).not.toHaveBeenCalledWith(
 					expect.objectContaining({ type: ECA.MESSAGE.PHOTO_READY }),
 				);
 			}
 		},
 	);
+});
+
+describe("review regressions", () => {
+	it("keeps monitoring after automatic send fails and the user sends manually", async () => {
+		const { sendMessage } = runFlow({
+			submit: false,
+			request: {
+				state: "pending",
+				prompt: "Test",
+				itemId: "123",
+				targetUrl: window.location.href,
+			},
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		setUrl("https://gemini.google.com/app/manual-chat");
+		await finishChatPolling();
+		expect(sendMessage).toHaveBeenCalledWith({
+			type: ECA.MESSAGE.SAVE_REPORT,
+			url: window.location.href,
+		});
+	});
+	it("restores recovery controls without sending a failed partial request", async () => {
+		const { ECAGeminiEditor, sendMessage } = runFlow({
+			request: {
+				state: "failed_partial",
+				requestId: "r1",
+				photos: [{ photoId: "p1" }],
+				failedPhotoIds: ["p1"],
+				completedPhotoIds: [],
+				targetUrl: window.location.href,
+			},
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
+		const button = [...document.querySelectorAll("button")].find(
+			(b) => b.textContent === "Continue without failed photos",
+		);
+		expect(button).toBeDefined();
+		button.click();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(sendMessage).toHaveBeenCalledWith({
+			type: ECA.MESSAGE.CONTINUE_WITH_FAILED_PHOTOS,
+			requestId: "r1",
+		});
+		expect(ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
+	});
 });

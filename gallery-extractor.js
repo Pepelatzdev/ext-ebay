@@ -49,6 +49,14 @@ var ECAGalleryExtractor = (() => {
 			.filter((entry) => entry.url);
 	}
 
+	function imageIdentity(rawUrl) {
+		const url = new URL(rawUrl);
+		const match = url.pathname.match(/^(\/images\/g\/[^/]+)\/s-l(\d+)\.[^/]+$/);
+		return match
+			? { key: `${url.origin}${match[1]}`, width: Number(match[2]) }
+			: { key: rawUrl, width: 0 };
+	}
+
 	function collectGalleryPhotos(document, pageUrl = window.location.href) {
 		const roots = Array.from(
 			document.querySelectorAll(
@@ -62,7 +70,7 @@ var ECAGalleryExtractor = (() => {
 		);
 		const photos = [];
 		const omitted = [];
-		const seen = new Set();
+		const seen = new Map();
 		for (const [order, element] of elements.entries()) {
 			const candidates = urlsFromElement(element, pageUrl);
 			const allowedCandidates = candidates.filter((candidate) =>
@@ -73,17 +81,33 @@ var ECAGalleryExtractor = (() => {
 					omitted.push({ reason: "disallowed-url", url });
 				continue;
 			}
-			const sourceUrl = allowedCandidates.sort(
-				(a, b) => b.width - a.width || b.url.length - a.url.length,
-			)[0].url;
-			if (seen.has(sourceUrl)) continue;
-			seen.add(sourceUrl);
-			photos.push({
-				photoId: sourceUrl,
-				sourceUrl,
-				thumbnailUrl: candidates[0]?.url || sourceUrl,
+			const ranked = allowedCandidates
+				.map((candidate) => {
+					const identity = imageIdentity(candidate.url);
+					return {
+						...candidate,
+						key: identity.key,
+						width: Math.max(candidate.width, identity.width),
+					};
+				})
+				.sort((a, b) => b.width - a.width);
+			const best = ranked[0];
+			const existing = seen.get(best.key);
+			if (existing) {
+				if (best.width > existing.width) {
+					existing.photo.sourceUrl = best.url;
+					existing.width = best.width;
+				}
+				continue;
+			}
+			const photo = {
+				photoId: best.key,
+				sourceUrl: best.url,
+				thumbnailUrl: allowedCandidates[0].url,
 				order,
-			});
+			};
+			seen.set(best.key, { photo, width: best.width });
+			photos.push(photo);
 		}
 		return { photos, omitted, totalDiscovered: photos.length + omitted.length };
 	}

@@ -57,3 +57,17 @@ describe("gallery extractor", () => {
 		});
 	});
 });
+
+it("groups CDN sizes across elements and retains first gallery order", () => {
+	gallery(
+		`<img src="https://i.ebayimg.com/images/g/ABC/s-l140.jpg"><img src="https://i.ebayimg.com/images/g/XYZ/s-l500.jpg"><img src="https://i.ebayimg.com/images/g/ABC/s-l1600.jpg"><img src="https://i.ebayimg.com/images/g/ABC/s-l960.jpg">`,
+	);
+	const result = extractor.collectGalleryPhotos(document);
+	expect(result.photos.map((p) => p.sourceUrl)).toEqual([
+		"https://i.ebayimg.com/images/g/ABC/s-l1600.jpg",
+		"https://i.ebayimg.com/images/g/XYZ/s-l500.jpg",
+	]);
+	expect(result.photos[0].thumbnailUrl).toBe(
+		"https://i.ebayimg.com/images/g/ABC/s-l140.jpg",
+	);
+});

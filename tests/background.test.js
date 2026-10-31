@@ -59,8 +59,19 @@ function createWorker() {
 		"chrome",
 		"importScripts",
 		"fetch",
-		`${scripts}; return { ECA, handleMessage };`,
-	)(chrome, () => {}, vi.fn());
+		"ECAPhotoTransfer",
+		`${scripts}; return { ECA, handleMessage, attachmentCache, ECAPhotoTransfer };`,
+	)(chrome, () => {}, vi.fn(), {
+		downloadSelected: vi.fn(async (photos) => ({
+			succeeded: photos.map((p) => ({
+				...p,
+				bytes: new Uint8Array([1]),
+				size: 1,
+				mimeType: "image/jpeg",
+			})),
+			failed: [],
+		})),
+	});
 	return { chrome, listeners, session, sync, ...worker };
 }
 
@@ -168,5 +179,128 @@ describe("background Gemini request flow", () => {
 		await listeners.alarm({ name: "eca-request:102" });
 		expect(session["geminiRequest:102"]).toBeUndefined();
 		vi.useRealTimers();
+	});
+});
+
+describe("photo recovery regressions", () => {
+	function setup() {
+		const worker = createWorker();
+		worker.session["geminiRequest:101"] = {
+			requestId: "r1",
+			itemId: "123",
+			createdAt: Date.now(),
+			preparedAt: Date.now(),
+			state: "failed_partial",
+			photos: [{ photoId: "p1" }, { photoId: "p2" }],
+			completedPhotoIds: [],
+			failedPhotoIds: ["p2"],
+		};
+		worker.attachmentCache.set("r1:p1", { bytes: new Uint8Array([1]) });
+		worker.attachmentCache.set("other:p1", { bytes: new Uint8Array([2]) });
+		return {
+			...worker,
+			sender: { url: "https://gemini.google.com/app", tab: { id: 101 } },
+		};
+	}
+	it.each(["RETRY_PHOTOS", "CONTINUE_WITH_FAILED_PHOTOS"])(
+		"allows %s after acknowledging a successful photo",
+		async (action) => {
+			const w = setup();
+			await w.handleMessage(
+				{ type: w.ECA.MESSAGE.PHOTO_READY, requestId: "r1", photoId: "p1" },
+				w.sender,
+			);
+			expect(w.session["geminiRequest:101"].state).toBe("failed_partial");
+			const result = await w.handleMessage(
+				{
+					type: w.ECA.MESSAGE[action],
+					requestId: "r1",
+					...(action === "RETRY_PHOTOS" ? { photoIds: ["p2"] } : {}),
+				},
+				w.sender,
+			);
+			expect(result.success).toBe(true);
+			if (action === "RETRY_PHOTOS") {
+				expect(w.session["geminiRequest:101"].state).toBe("attaching");
+				await w.handleMessage(
+					{ type: w.ECA.MESSAGE.PHOTO_READY, requestId: "r1", photoId: "p2" },
+					w.sender,
+				);
+				expect(w.session["geminiRequest:101"].state).toBe("waiting_for_chat");
+				expect(w.session["geminiRequest:101"].completedPhotoIds).toEqual([
+					"p1",
+					"p2",
+				]);
+			}
+		},
+	);
+	it.each(["alarm", "read", "close"])(
+		"clears expired photo bytes on %s",
+		async (action) => {
+			const w = setup();
+			w.session["geminiRequest:101"].preparedAt = Date.now() - 31 * 60 * 1000;
+			if (action === "alarm")
+				await w.listeners.alarm({ name: "eca-request:101" });
+			if (action === "read")
+				await w.handleMessage({ type: w.ECA.MESSAGE.CLAIM }, w.sender);
+			if (action === "close") await w.listeners.removed(101);
+			expect(w.session["geminiRequest:101"]).toBeUndefined();
+			expect(w.attachmentCache.has("r1:p1")).toBe(false);
+			expect(w.attachmentCache.has("other:p1")).toBe(true);
+		},
+	);
+	it.each(["PREPARE_PHOTOS", "RETRY_PHOTOS"])(
+		"discards %s results after tab closure",
+		async (action) => {
+			const w = setup();
+			if (action === "PREPARE_PHOTOS")
+				w.session["geminiRequest:101"].state = "attaching";
+			let finish;
+			w.ECAPhotoTransfer.downloadSelected.mockImplementation(
+				() =>
+					new Promise((resolve) => {
+						finish = resolve;
+					}),
+			);
+			const pending = w.handleMessage(
+				{
+					type: w.ECA.MESSAGE[action],
+					requestId: "r1",
+					...(action === "RETRY_PHOTOS" ? { photoIds: ["p2"] } : {}),
+				},
+				w.sender,
+			);
+			for (let i = 0; i < 5; i++) await Promise.resolve();
+			expect(finish).toBeTypeOf("function");
+			await w.listeners.removed(101);
+			finish({
+				succeeded: [
+					{
+						photoId: "p2",
+						bytes: new Uint8Array([1]),
+						size: 1,
+						mimeType: "image/jpeg",
+					},
+				],
+				failed: [],
+			});
+			expect((await pending).success).toBe(false);
+			expect(w.attachmentCache.has("r1:p2")).toBe(false);
+			expect(w.session["geminiRequest:101"]).toBeUndefined();
+		},
+	);
+	it("clears remaining photo bytes when a report is saved", async () => {
+		const w = setup();
+		w.session["geminiRequest:101"].state = "waiting_for_chat";
+		const response = await w.handleMessage(
+			{
+				type: w.ECA.MESSAGE.SAVE_REPORT,
+				url: "https://gemini.google.com/app/report",
+			},
+			w.sender,
+		);
+		expect(response.success).toBe(true);
+		expect(w.attachmentCache.has("r1:p1")).toBe(false);
+		expect(w.attachmentCache.has("other:p1")).toBe(true);
 	});
 });

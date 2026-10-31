@@ -1,6 +1,7 @@
 /* global chrome, ECA */
 /* biome-ignore-all lint/correctness/noUnusedVariables: service-worker global */
 var ECARequestStore = (() => {
+	let removalHandler = () => {};
 	const KEY_PREFIX = "geminiRequest:";
 	const ALARM_PREFIX = "eca-request:";
 	const key = (tabId) => `${KEY_PREFIX}${tabId}`;
@@ -95,7 +96,13 @@ var ECARequestStore = (() => {
 		return updated;
 	}
 
+	function onRemoved(handler) {
+		removalHandler = handler;
+	}
+
 	async function remove(tabId) {
+		const request = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
+		removalHandler(request);
 		await chrome.storage.session.remove(key(tabId));
 		await chrome.alarms.clear(alarm(tabId));
 	}
@@ -106,5 +113,13 @@ var ECARequestStore = (() => {
 		return Number.isInteger(tabId) ? tabId : null;
 	}
 
-	return { create, get, markInserted, remove, tabIdFromAlarm, update };
+	return {
+		create,
+		get,
+		markInserted,
+		remove,
+		tabIdFromAlarm,
+		update,
+		onRemoved,
+	};
 })();

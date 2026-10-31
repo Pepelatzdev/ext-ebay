@@ -44,7 +44,7 @@ saveBtn.addEventListener("click", () => {
 	}
 	if (!isValidGeminiUrl(geminiUrlValue)) {
 		showStatus(
-			`Use a Gemini Gem URL such as https://${ECA.GEMINI_HOST}/gem/your-gem-id. Existing chat URLs are not supported.`,
+			`Use a Gemini URL such as https://${ECA.GEMINI_HOST}/app.`,
 			"error",
 		);
 		return;

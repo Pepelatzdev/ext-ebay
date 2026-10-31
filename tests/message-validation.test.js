@@ -89,10 +89,10 @@ describe("message validation", () => {
 	});
 
 	it.each([
-		"https://gemini.google.com/app/existing-chat",
-		"https://gemini.google.com/",
+		"http://gemini.google.com/app",
+		"https://gemini.google.com.evil.com/app",
 		"https://example.com/gem/id",
-	])("rejects a non-Gem start target %s", (url) => {
+	])("rejects a invalid Gemini start target %s", (url) => {
 		const result = validation.validateStart(
 			{ type: "START_GEMINI_REQUEST", itemId: "123", prompt: "Prompt", url },
 			{ url: "https://www.ebay.com/itm/123", tab: { id: 1 } },
