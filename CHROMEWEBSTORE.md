@@ -82,9 +82,9 @@ Homepage: https://pepelatzdev.github.io/ext-ebay/
 
 | Version | Date | Changes | Status |
 | --- | --- | --- | --- |
-| 1.1.3 | 2026-10-31 | Preserve listing-to-Gemini behavior while reorganizing code, strengthen package checks, retain verified draft and photo handling, and expand regression coverage to 184 tests. | Prepared for submission through the release workflow |
+| 1.1.3 | 2026-10-31 | Preserve listing-to-Gemini behavior while reorganizing code, strengthen package checks, retain verified draft and photo handling, and expand regression coverage to 184 tests. | Submitted — PENDING_REVIEW |
 
-The GitHub Actions release run is the source of truth for upload/submission status; a successful submission does not by itself prove that store review is complete.
+The [GitHub Actions release run](https://github.com/Pepelatzdev/ext-ebay/actions/runs/41244464059) completed successfully and returned `PENDING_REVIEW`. Submission is confirmed; store review is not yet complete.
 
 ## Review Notes
 
