@@ -1,12 +1,14 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { api } from "./helpers/scripts.js";
 
-const configCode = readFileSync(resolve("config.js"), "utf8");
-const transferCode = readFileSync(resolve("photo-transfer.js"), "utf8");
-const transfer = new Function(
-	`${configCode}\n${transferCode}; return ECAPhotoTransfer;`,
-)();
+const transfer = api(
+	[
+		"src/domain/policy.js",
+		"src/domain/photo-codec.js",
+		"src/infrastructure/photo-downloader.js",
+	],
+	`({ ...ECAPhotoDownloader.create({ policy: ECA, fetch }), ...ECAPhotoCodec.create({ encode: btoa, decode: atob, chunkBytes: ECA.PHOTO_CHUNK_BYTES }) })`,
+);
 
 function response(
 	bytes,

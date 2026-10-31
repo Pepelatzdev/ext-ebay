@@ -1,8 +1,11 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { scripts } from "./helpers/scripts.js";
 
-const code = readFileSync(resolve("request-store.js"), "utf8");
+const code = scripts([
+	"src/domain/request.js",
+	"src/infrastructure/request-repository.js",
+	"src/application/requests.js",
+]);
 
 function createStore() {
 	const data = {};
@@ -20,7 +23,7 @@ function createStore() {
 	const store = new Function(
 		"chrome",
 		"ECA",
-		`${code}; return ECARequestStore;`,
+		`${code}; return ECARequests.create({ repository: ECARequestRepository.create(chrome.storage.session), alarms: chrome.alarms, model: ECARequestModel.create(ECA), now: () => Date.now() });`,
 	)(chrome, ECA);
 	return { chrome, data, store };
 }

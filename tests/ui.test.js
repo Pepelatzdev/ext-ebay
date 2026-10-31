@@ -1,18 +1,14 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ebayComposition, ebayModules, source } from "./helpers/scripts.js";
 
-const testDir = dirname(fileURLToPath(import.meta.url));
-const configCode = readFileSync(resolve(testDir, "../config.js"), "utf8");
-const extractorsCode = readFileSync(
-	resolve(testDir, "../extractors.js"),
-	"utf8",
-);
-const uiCode = readFileSync(resolve(testDir, "../ui.js"), "utf8");
-const contentCss = readFileSync(resolve(testDir, "../content.css"), "utf8");
+const uiCode = source("src/ebay/view.js");
+const contentCss = source("src/ebay/content.css");
 
 function setUrl(url) {
+	if (Object.getPrototypeOf(window.location) === Object.prototype) {
+		window.location.href = url;
+		return;
+	}
 	Object.defineProperty(window, "location", {
 		value: { href: url },
 		writable: true,
@@ -47,9 +43,7 @@ function createChrome(initialSync = {}) {
 }
 
 function loadUi() {
-	return new Function(
-		[configCode, extractorsCode, uiCode, "return { renderUI };"].join("\n"),
-	)();
+	return new Function(`${ebayModules()}\n${ebayComposition()}\nreturn view;`)();
 }
 
 beforeEach(() => {
@@ -212,4 +206,19 @@ describe("floating Gemini actions", () => {
 		expect(contentCss).toContain("color: var(--eca-primary-foreground)");
 		expect(contentCss).not.toContain(":root");
 	});
+});
+
+it("explains that the listing must reload after extension invalidation", async () => {
+	const { renderUI } = loadUi();
+	await renderUI();
+	chrome.storage.sync.get.mockRejectedValue(
+		new Error("Extension context invalidated."),
+	);
+	const button = document.getElementById("ebay-copy-assistant-btn");
+	button.click();
+	for (let i = 0; i < 20; i++) await Promise.resolve();
+	expect(button.textContent).toContain("Reload this eBay page");
+	expect(button.disabled).toBe(true);
+	expect(button.getAttribute("aria-busy")).toBe("false");
+	expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
 });

@@ -20,34 +20,50 @@ function verifyPackage(zipFile = process.argv[2]) {
 			throw new Error("Package contains key/update_url");
 		}
 		const required = ["manifest.json", ...PRODUCTION_FILES];
-		for (const file of required) {
-			if (!fs.existsSync(path.join(tempDir, file))) {
-				throw new Error(`Missing ${file}`);
-			}
+		function requireAsset(file, parent = "manifest.json") {
+			const absolute = path.resolve(tempDir, path.dirname(parent), file);
+			const relative = path.relative(tempDir, absolute);
+			if (relative.startsWith("..") || path.isAbsolute(relative))
+				throw new Error(`Asset escapes package: ${file}`);
+			if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile())
+				throw new Error(`Missing ${relative}`);
+			return relative;
 		}
-		for (const icon of Object.values(manifest.icons || {})) {
-			if (!fs.existsSync(path.join(tempDir, icon))) {
-				throw new Error(`Missing ${icon}`);
-			}
-		}
+		for (const file of required) requireAsset(file);
+		const iconFiles = [
+			...Object.values(manifest.icons || {}),
+			...Object.values(manifest.action?.default_icon || {}),
+		];
+		for (const file of iconFiles) requireAsset(file);
 		for (const entry of manifest.content_scripts || []) {
-			for (const file of [...(entry.js || []), ...(entry.css || [])]) {
-				if (!fs.existsSync(path.join(tempDir, file))) {
-					throw new Error(`Missing ${file}`);
+			for (const file of [...(entry.js || []), ...(entry.css || [])])
+				requireAsset(file);
+		}
+		const worker = requireAsset(manifest.background.service_worker);
+		const workerCode = fs.readFileSync(path.join(tempDir, worker), "utf8");
+		const imports = workerCode.match(/importScripts\(([\s\S]*?)\);/);
+		if (!imports) throw new Error("Missing worker imports");
+		for (const match of imports[1].matchAll(/"([^"]+)"/g))
+			requireAsset(match[1], worker);
+		const options = requireAsset(manifest.options_page);
+		const html = fs.readFileSync(path.join(tempDir, options), "utf8");
+		for (const match of html.matchAll(
+			/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/g,
+		))
+			requireAsset(match[1], options);
+		const allowed = new Set([...required, ...iconFiles]);
+		function verifyDirectory(directory) {
+			for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+				const absolute = path.join(directory, entry.name);
+				if (entry.isDirectory()) verifyDirectory(absolute);
+				else {
+					const relative = path.relative(tempDir, absolute);
+					if (!allowed.has(relative))
+						throw new Error(`Forbidden package entry ${relative}`);
 				}
 			}
 		}
-		for (const forbidden of [
-			"tests",
-			"docs",
-			"scripts",
-			"README.md",
-			"package.json",
-		]) {
-			if (fs.existsSync(path.join(tempDir, forbidden))) {
-				throw new Error(`Forbidden package entry ${forbidden}`);
-			}
-		}
+		verifyDirectory(tempDir);
 		return { manifestVersion: 3, version: manifest.version };
 	} finally {
 		fs.rmSync(tempDir, { recursive: true, force: true });

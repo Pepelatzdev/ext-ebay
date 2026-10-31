@@ -1,8 +1,10 @@
+import { execFileSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -87,19 +89,15 @@ describe("production package", () => {
 		);
 		const { PRODUCTION_FILES } = require("../scripts/pack.js");
 		expect(manifest.permissions).toContain("alarms");
-		expect(geminiScripts.js).toEqual([
-			"config.js",
-			"photo-transfer.js",
-			"gemini-editor.js",
-			"gemini-attachments.js",
-			"gemini-content.js",
-		]);
+		expect(geminiScripts.js.at(-1)).toBe("src/entrypoints/gemini.js");
+		expect(geminiScripts.js).toContain("src/application/gemini.js");
 		expect(PRODUCTION_FILES).toEqual(
 			expect.arrayContaining([
-				"message-validation.js",
-				"request-store.js",
-				"report-store.js",
-				"gemini-editor.js",
+				...geminiScripts.js,
+				manifest.background.service_worker,
+				manifest.options_page,
+				"src/domain/message-validation.js",
+				"src/infrastructure/request-repository.js",
 			]),
 		);
 	});
@@ -112,6 +110,52 @@ describe("production package", () => {
 		packExtension({ rootDir: join(import.meta.dirname, ".."), outputFile });
 		expect(verifyPackage(outputFile)).toMatchObject({ manifestVersion: 3 });
 	});
+
+	it.each(["worker import", "options stylesheet", "unexpected file"])(
+		"rejects a package with %s problems",
+		(problem) => {
+			const { packExtension } = require("../scripts/pack.js");
+			const { verifyPackage } = require("../scripts/verify-package.js");
+			const tempDir = mkdtempSync(join(tmpdir(), "eca-package-invalid-"));
+			try {
+				const outputFile = join(tempDir, "extension.zip");
+				const unpacked = join(tempDir, "unpacked");
+				packExtension({ rootDir: join(import.meta.dirname, ".."), outputFile });
+				execFileSync("unzip", ["-q", outputFile, "-d", unpacked]);
+				if (problem === "worker import") {
+					const file = join(unpacked, "src/entrypoints/background.js");
+					writeFileSync(
+						file,
+						readFileSync(file, "utf8").replace(
+							"importScripts(",
+							'importScripts("../domain/missing.js",',
+						),
+					);
+				}
+				if (problem === "options stylesheet") {
+					const file = join(unpacked, "src/options/options.html");
+					writeFileSync(
+						file,
+						readFileSync(file, "utf8").replace(
+							'href="options.css"',
+							'href="missing.css"',
+						),
+					);
+				}
+				if (problem === "unexpected file")
+					writeFileSync(join(unpacked, "debug.txt"), "debug output");
+				rmSync(outputFile);
+				execFileSync("zip", ["-q", "-r", outputFile, "."], { cwd: unpacked });
+				expect(() => verifyPackage(outputFile)).toThrow(
+					problem === "unexpected file"
+						? /Forbidden package entry debug.txt/
+						: /Missing .*missing/,
+				);
+			} finally {
+				rmSync(tempDir, { recursive: true, force: true });
+			}
+		},
+	);
 
 	it("throws and leaves no archive when the zip executable fails", () => {
 		const { packExtension } = require("../scripts/pack.js");

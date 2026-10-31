@@ -56,9 +56,8 @@ var ECAGeminiEditor = (() => {
 	}
 
 	function editorText(editor) {
-		if (typeof editor.innerText === "string" && editor.innerText) {
-			return editor.innerText;
-		}
+		// Read logical lines, not innerText: Chromium adds visual paragraph
+		// spacing to innerText after Gemini converts the prompt to <p> nodes.
 		const blockTags = new Set([
 			"ADDRESS",
 			"ARTICLE",
@@ -79,36 +78,73 @@ var ECAGeminiEditor = (() => {
 				result += "\n";
 				return;
 			}
-			for (const child of node.childNodes) visit(child);
-			if (blockTags.has(node.tagName)) result += "\n";
+			const block = blockTags.has(node.tagName);
+			const emptyLine =
+				block &&
+				node.childNodes.length === 1 &&
+				node.firstChild.nodeName === "BR";
+			// A sole <br> is an empty paragraph placeholder, not a second line.
+			if (!emptyLine) for (const child of node.childNodes) visit(child);
+			if (block) result += "\n";
 		}
 		visit(editor);
 		return result;
 	}
 
-	function insertPrompt(editor, prompt) {
-		if (editorText(editor).trim()) return false;
-		editor.focus();
-		try {
-			const range = document.createRange();
-			range.selectNodeContents(editor);
-			range.deleteContents();
-			range.insertNode(document.createTextNode(prompt));
-			const selection = window.getSelection();
-			selection.removeAllRanges();
-			range.collapse(false);
-			selection.addRange(range);
-		} catch {
-			document.execCommand("insertText", false, prompt);
+	async function insertPrompt(
+		editor,
+		prompt,
+		timeoutMs = 2000,
+		replaceDraft = false,
+	) {
+		const existing = comparableText(editorText(editor));
+		const expected = comparableText(prompt);
+		if (existing.trim() && existing !== expected && !replaceDraft) return false;
+		if (!existing.trim() || (replaceDraft && existing !== expected)) {
+			editor.focus();
+			try {
+				const range = document.createRange();
+				range.selectNodeContents(editor);
+				range.deleteContents();
+				range.insertNode(document.createTextNode(prompt));
+				const selection = window.getSelection();
+				selection.removeAllRanges();
+				range.collapse(false);
+				selection.addRange(range);
+			} catch {
+				document.execCommand("insertText", false, prompt);
+			}
+			editor.dispatchEvent(
+				new InputEvent("input", {
+					bubbles: true,
+					inputType: "insertText",
+					data: prompt,
+				}),
+			);
 		}
-		editor.dispatchEvent(
-			new InputEvent("input", {
-				bubbles: true,
-				inputType: "insertText",
-				data: prompt,
-			}),
-		);
-		return comparableText(editorText(editor)) === comparableText(prompt);
+		// Gemini normalizes its editor asynchronously after the input event.
+		// Wait for two matching reads, never ACK the transient DOM we inserted.
+		const deadline = Date.now() + timeoutMs;
+		let matches = 0;
+		while (Date.now() < deadline) {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			if (!editor.isConnected) {
+				const replacement = findEditor();
+				if (!replacement) {
+					matches = 0;
+					continue;
+				}
+				editor = replacement;
+			}
+			const actual = comparableText(editorText(editor));
+			matches = actual === expected ? matches + 1 : 0;
+			if (matches >= 2) return true;
+		}
+		console.warn("eBay Copy Assistant: text verification timed out", {
+			expectedLength: expected.length,
+			actualLength: comparableText(editorText(editor)).length,
+		});
+		return false;
 	}
 
 	async function submitPrompt(editor, timeoutMs = 15_000) {

@@ -1,16 +1,9 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { scripts, workerFiles } from "./helpers/scripts.js";
 
-const scripts = [
-	"config.js",
-	"message-validation.js",
-	"request-store.js",
-	"report-store.js",
-	"background.js",
-]
-	.map((file) => readFileSync(resolve(file), "utf8"))
-	.join("\n");
+const workerSource = scripts(
+	workerFiles().filter((file) => !file.endsWith("photo-downloader.js")),
+);
 
 function createWorker() {
 	const session = {};
@@ -59,18 +52,20 @@ function createWorker() {
 		"chrome",
 		"importScripts",
 		"fetch",
-		"ECAPhotoTransfer",
-		`${scripts}; return { ECA, handleMessage, attachmentCache, ECAPhotoTransfer };`,
+		"ECAPhotoDownloader",
+		`${workerSource}; return { ECA, handleMessage, attachmentCache: cache.entries, ECAPhotoTransfer: photos };`,
 	)(chrome, () => {}, vi.fn(), {
-		downloadSelected: vi.fn(async (photos) => ({
-			succeeded: photos.map((p) => ({
-				...p,
-				bytes: new Uint8Array([1]),
-				size: 1,
-				mimeType: "image/jpeg",
+		create: () => ({
+			downloadSelected: vi.fn(async (photos) => ({
+				succeeded: photos.map((p) => ({
+					...p,
+					bytes: new Uint8Array([1]),
+					size: 1,
+					mimeType: "image/jpeg",
+				})),
+				failed: [],
 			})),
-			failed: [],
-		})),
+		}),
 	});
 	return { chrome, listeners, session, sync, ...worker };
 }

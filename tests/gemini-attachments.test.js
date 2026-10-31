@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const adapter = new Function(
-	`${readFileSync("gemini-attachments.js", "utf8")}; return ECAGeminiAttachments;`,
+	`${readFileSync("src/gemini/attachments.js", "utf8")}; return ECAGeminiAttachments;`,
 )();
 function preview(root, ready = true) {
 	const image = document.createElement("img");
@@ -27,7 +27,7 @@ describe("Gemini attachment confirmation", () => {
 		const waiting = adapter.waitForAttachment(
 			document.body,
 			new Set(),
-			1000,
+			3000,
 			2,
 		);
 		const done = vi.fn();
@@ -36,11 +36,13 @@ describe("Gemini attachment confirmation", () => {
 		await vi.advanceTimersByTimeAsync(0);
 		expect(done).not.toHaveBeenCalled();
 		preview(document.body);
+		await vi.advanceTimersByTimeAsync(1100);
 		await expect(waiting).resolves.toBe(true);
 	});
-	it("confirms a new loaded preview with Ukrainian labels without a fixed delay", async () => {
+	it("confirms previews only after a stable readiness period", async () => {
 		const waiting = adapter.waitForAttachment(document.body, new Set());
 		preview(document.body);
+		await vi.advanceTimersByTimeAsync(1100);
 		await expect(waiting).resolves.toBe(true);
 		expect(vi.getTimerCount()).toBe(0);
 	});
@@ -78,6 +80,41 @@ describe("Gemini attachment confirmation", () => {
 		await Promise.resolve();
 		expect(done).not.toHaveBeenCalled();
 		progress.remove();
+		await vi.advanceTimersByTimeAsync(1100);
 		await expect(waiting).resolves.toBe(true);
 	});
+});
+
+it("resets readiness when upload starts after the preview appears", async () => {
+	const root = document.body;
+	const waiting = adapter.waitForAttachment(root, new Set(), 5000);
+	preview(root);
+	const done = vi.fn();
+	waiting.then(done);
+	await vi.advanceTimersByTimeAsync(500);
+	const progress = document.createElement("div");
+	progress.setAttribute("role", "progressbar");
+	root.append(progress);
+	await vi.advanceTimersByTimeAsync(700);
+	expect(done).not.toHaveBeenCalled();
+	progress.remove();
+	await vi.advanceTimersByTimeAsync(500);
+	expect(done).not.toHaveBeenCalled();
+	await vi.advanceTimersByTimeAsync(600);
+	await expect(waiting).resolves.toBe(true);
+});
+it("does not confirm photos while the send button is disabled", async () => {
+	const button = document.createElement("button");
+	button.className = "send-button";
+	button.disabled = true;
+	document.body.append(button);
+	const waiting = adapter.waitForAttachment(document.body, new Set(), 5000);
+	preview(document.body);
+	const done = vi.fn();
+	waiting.then(done);
+	await vi.advanceTimersByTimeAsync(1500);
+	expect(done).not.toHaveBeenCalled();
+	button.disabled = false;
+	await vi.advanceTimersByTimeAsync(1100);
+	await expect(waiting).resolves.toBe(true);
 });

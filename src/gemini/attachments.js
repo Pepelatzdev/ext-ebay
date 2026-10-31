@@ -10,11 +10,14 @@ var ECAGeminiAttachments = (() => {
 		expectedCount = 1,
 	) {
 		return new Promise((resolve) => {
+			let readySince = null;
 			const observer = new MutationObserver(check);
+			const poll = setInterval(check, 100);
 			const timer = setTimeout(() => finish(false), timeoutMs);
 			function finish(value) {
 				observer.disconnect();
 				clearTimeout(timer);
+				clearInterval(poll);
 				root.removeEventListener("load", check, true);
 				resolve(value);
 			}
@@ -28,11 +31,22 @@ var ECAGeminiAttachments = (() => {
 							image.naturalWidth > 0 &&
 							image.naturalHeight > 0,
 					).length >= expectedCount;
+				const sendButton = root.querySelector(
+					'button.send-button, button[data-test-id="send-button"], button[aria-label="Send message"], button[aria-label="Надіслати повідомлення"]',
+				);
 				if (
+					root.isConnected &&
 					ready &&
+					(!sendButton ||
+						(!sendButton.disabled &&
+							sendButton.getAttribute("aria-disabled") !== "true")) &&
 					!root.querySelector('[role="progressbar"], [aria-busy="true"]')
-				)
-					finish(true);
+				) {
+					readySince ??= Date.now();
+					if (Date.now() - readySince >= 1000) finish(true);
+				} else {
+					readySince = null;
+				}
 			}
 			observer.observe(root, {
 				childList: true,

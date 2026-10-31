@@ -137,25 +137,25 @@ npm run verify:package
 
 ## Архітектура
 
-- `manifest.json` — Manifest V3, дозволи, host permissions і content scripts;
-- `config.js` — стандартні налаштування, обмеження безпеки та селектори eBay;
-- `extractors.js` — збирання даних із DOM і форматування промпту;
-- `gallery-extractor.js`, `photo-picker.js` — пошук основної галереї та вибір фото користувачем;
-- `photo-transfer.js`, `gemini-attachments.js` — контрольоване завантаження фото та підтверджене додавання до Gemini;
-- `ui.js` — плаваючий UI, стани **Ask Gemini** / **Show report** і повторний запит;
-- `content.js` — запуск UI на сторінці товару й реакція на зміни синхронізованого звіту;
-- `gemini-editor.js` — пошук Gemini composer, безпечне вставлення й перевірка тексту;
-- `gemini-content.js` — claim/ACK/save flow для запиту, прив'язаного до поточної Gemini-вкладки;
-- `request-store.js` — тимчасовий per-tab стан запиту в `chrome.storage.session` і TTL cleanup;
-- `report-store.js` — єдиний writer синхронізованої історії звітів із count/byte pruning;
-- `message-validation.js` — schema, sender і URL validation для privileged messages;
-- `background.js` — service-worker orchestration, безпечне відкриття Gemini та HTTPS-завантаження описів eBay;
-- `options.html`, `options.js`, `options.css` — сторінка налаштувань;
-- `tests/` — тести Vitest;
-- `scripts/pack.js` — створення production ZIP;
-- `scripts/verify-package.js` — перевірка складу й manifest готового ZIP;
-- `scripts/verify-version.js` — контроль узгодженості версії проєкту та релізу;
-- `scripts/cws-publish.js` — upload, polling і publish через Chrome Web Store API V2 з access token від GitHub OIDC.
+Розширення працює без кроку збирання: у `chrome://extensions` завантажується коренева папка з `manifest.json`. Код виконання розташований у `src/`:
+
+| Папка | Відповідальність |
+| --- | --- |
+| `domain/` | Політики URL і повідомлень, ліміти, формування промпту, правила станів запиту й історії звітів, кодування фото |
+| `application/` | Сценарії запуску з eBay, підготовки Gemini, обробки фонових команд і життєвого циклу запиту |
+| `infrastructure/` | Доступ до Chrome API, сховище, завантаження опису й фото, тимчасовий кеш і маршрутизація повідомлень |
+| `ebay/` | Селектори, читання DOM, галерея, вибір фото, кнопки й стилі |
+| `gemini/` | Редактор, підтвердження вкладень, відображення статусу, складання файлів і спостереження URL |
+| `options/` | Сторінка налаштувань та її представлення |
+| `entrypoints/` | Створення компонентів, передавання залежностей і підключення подій браузера |
+
+Правила в `domain` не звертаються до браузера чи мережі. Сценарії `application` отримують операції сховища, мережі та інтерфейсу аргументами фабрики `create(...)`. Представлення показує стан і викликає переданий обробник; воно не запускає мережеві чи storage-операції напряму.
+
+Класичні скрипти експортують по одному іменованому API (`ECA*`). Порядок завантаження content scripts визначений у маніфесті, worker — в `src/entrypoints/background.js`, налаштувань — у `src/options/options.html`. Глобальні API модулів з'єднуються в точках входу; залежності сценаріїв передаються явно. При додаванні runtime-файлу потрібно оновити його підключення та явний production-перелік у `scripts/pack.js`.
+
+`tests/helpers/scripts.js` читає фактичні списки скриптів із маніфесту й worker. Тести перевіряють чисті правила без DOM, сценарії з підставними залежностями та DOM-адаптери. Окремі перевірки контролюють межі шарів і завантаження точок входу.
+
+`scripts/pack.js` створює ZIP зі збереженням підкаталогів. `scripts/verify-package.js` перевіряє склад, manifest, імпорти worker, ресурси options та content scripts. `scripts/verify-version.js` контролює версії; `scripts/cws-publish.js` відповідає за публікацію через Chrome Web Store API V2.
 
 ## Зберігання даних і безпека
 

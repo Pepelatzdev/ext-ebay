@@ -27,7 +27,7 @@ describe("manifest compliance", () => {
 it("publishes and links the privacy policy", () => {
 	const privacy = readFileSync(resolve("privacy.html"), "utf8");
 	const landing = readFileSync(resolve("index.html"), "utf8");
-	const options = readFileSync(resolve("options.html"), "utf8");
+	const options = readFileSync(resolve("src/options/options.html"), "utf8");
 	expect(privacy).toContain("Google Gemini");
 	expect(privacy).toContain("chrome.storage.session");
 	expect(privacy).toContain("Chrome Web Store User Data Policy");
@@ -63,6 +63,6 @@ it("documents current limits permissions and privacy URL", () => {
 });
 
 it("does not retain unused configuration entries", () => {
-	const config = readFileSync(resolve("config.js"), "utf8");
+	const config = readFileSync(resolve("src/domain/policy.js"), "utf8");
 	expect(config).not.toContain("DESC_FETCH_HOST_SUFFIXES");
 });

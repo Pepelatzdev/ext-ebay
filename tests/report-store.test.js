@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { scripts } from "./helpers/scripts.js";
 
-const code = readFileSync(resolve("report-store.js"), "utf8");
+const code = scripts([
+	"src/domain/report-policy.js",
+	"src/infrastructure/report-store.js",
+]);
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
 
 function createStore(initial = {}) {
@@ -27,9 +29,10 @@ function createStore(initial = {}) {
 		),
 	};
 	const chrome = { __data: data, storage: { sync } };
-	const store = new Function("chrome", `${code}; return ECAReportStore;`)(
-		chrome,
-	);
+	const store = new Function(
+		"chrome",
+		`${code}; return ECAReportStore.create({ sync: chrome.storage.sync, policy: ECAReportPolicy });`,
+	)(chrome);
 	return { chrome, data, store };
 }
 

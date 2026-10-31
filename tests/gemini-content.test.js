@@ -1,12 +1,19 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentFiles, scripts, source } from "./helpers/scripts.js";
 
-const configCode = readFileSync(resolve("config.js"), "utf8");
-const code = readFileSync(resolve("gemini-content.js"), "utf8");
+const configCode = source("src/domain/policy.js");
+const code = scripts(
+	contentFiles("gemini.google.com").filter(
+		(file) => !file.endsWith("/editor.js") && !file.endsWith("/attachments.js"),
+	),
+);
 const ECA = new Function(`${configCode}; return ECA;`)();
 
 function setUrl(url) {
+	if (Object.getPrototypeOf(window.location) === Object.prototype) {
+		window.location.href = url;
+		return;
+	}
 	Object.defineProperty(window, "location", {
 		value: { href: url },
 		writable: true,
@@ -19,11 +26,12 @@ function runFlow({
 	editor = document.createElement("div"),
 	respond,
 	submit = true,
+	insert = true,
 }) {
 	const ECAGeminiEditor = {
 		submitPrompt: vi.fn(async () => submit),
 		waitForEditor: vi.fn(async () => editor),
-		insertPrompt: vi.fn(() => true),
+		insertPrompt: vi.fn(() => insert),
 	};
 	const sendMessage = vi.fn(async (message) => {
 		const response = respond?.(message);
@@ -37,17 +45,11 @@ function runFlow({
 	const ECAGeminiAttachments = {
 		attachFiles: vi.fn(async () => ({ ok: true })),
 	};
-	const ECAPhotoTransfer = {
-		fromBase64: (value) => Uint8Array.from(atob(value), (c) => c.charCodeAt(0)),
-	};
-	new Function(
-		"chrome",
-		"ECA",
-		"ECAGeminiEditor",
-		"ECAGeminiAttachments",
-		"ECAPhotoTransfer",
-		code,
-	)(chrome, ECA, ECAGeminiEditor, ECAGeminiAttachments, ECAPhotoTransfer);
+	new Function("chrome", "ECAGeminiEditor", "ECAGeminiAttachments", code)(
+		chrome,
+		ECAGeminiEditor,
+		ECAGeminiAttachments,
+	);
 	return { ECAGeminiEditor, ECAGeminiAttachments, sendMessage };
 }
 
@@ -255,4 +257,49 @@ describe("review regressions", () => {
 		});
 		expect(ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
 	});
+});
+
+it("shows a terminal error when text acknowledgement fails", async () => {
+	const { ECAGeminiEditor, ECAGeminiAttachments } = runFlow({
+		request: {
+			state: "pending",
+			prompt: "test",
+			itemId: "123",
+			targetUrl: window.location.href,
+		},
+		respond: (message) =>
+			message.type === ECA.MESSAGE.ACK_INSERTED
+				? { success: false }
+				: undefined,
+	});
+	await vi.advanceTimersByTimeAsync(0);
+	expect(document.getElementById("eca-gemini-status").dataset.state).toBe(
+		"error",
+	);
+	expect(document.getElementById("eca-gemini-status").textContent).not.toBe(
+		"Inserting text…",
+	);
+	expect(ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
+	expect(ECAGeminiAttachments.attachFiles).not.toHaveBeenCalled();
+});
+
+it("reports failed verification without starting photos or sending", async () => {
+	const flow = runFlow({
+		insert: false,
+		request: {
+			state: "pending",
+			prompt: "Test",
+			itemId: "123",
+			targetUrl: window.location.href,
+		},
+	});
+	await vi.advanceTimersByTimeAsync(0);
+	const status = document.getElementById("eca-gemini-status");
+	expect(status.dataset.state).toBe("error");
+	expect(status.textContent).toContain("different draft");
+	expect(flow.sendMessage).not.toHaveBeenCalledWith(
+		expect.objectContaining({ type: ECA.MESSAGE.ACK_INSERTED }),
+	);
+	expect(flow.ECAGeminiAttachments.attachFiles).not.toHaveBeenCalled();
+	expect(flow.ECAGeminiEditor.submitPrompt).not.toHaveBeenCalled();
 });

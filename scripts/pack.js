@@ -4,24 +4,41 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const PRODUCTION_FILES = [
-	"background.js",
-	"message-validation.js",
-	"request-store.js",
-	"report-store.js",
-	"config.js",
-	"gallery-extractor.js",
-	"extractors.js",
-	"photo-picker.js",
-	"photo-transfer.js",
-	"ui.js",
-	"content.js",
-	"gemini-editor.js",
-	"gemini-attachments.js",
-	"gemini-content.js",
-	"options.html",
-	"options.css",
-	"options.js",
-	"content.css",
+	"src/application/background.js",
+	"src/application/gemini.js",
+	"src/application/requests.js",
+	"src/application/start-ebay.js",
+	"src/domain/message-validation.js",
+	"src/domain/photo-codec.js",
+	"src/domain/policy.js",
+	"src/domain/prompt.js",
+	"src/domain/report-policy.js",
+	"src/domain/request.js",
+	"src/ebay/config.js",
+	"src/ebay/content.css",
+	"src/ebay/gallery.js",
+	"src/ebay/photo-picker.js",
+	"src/ebay/reader.js",
+	"src/ebay/view.js",
+	"src/entrypoints/background.js",
+	"src/entrypoints/ebay.js",
+	"src/entrypoints/gemini.js",
+	"src/entrypoints/options.js",
+	"src/gemini/attachments.js",
+	"src/gemini/chat-observer.js",
+	"src/gemini/editor.js",
+	"src/gemini/files.js",
+	"src/gemini/status.js",
+	"src/infrastructure/attachment-cache.js",
+	"src/infrastructure/chrome-client.js",
+	"src/infrastructure/description-fetcher.js",
+	"src/infrastructure/message-router.js",
+	"src/infrastructure/photo-downloader.js",
+	"src/infrastructure/report-store.js",
+	"src/infrastructure/request-repository.js",
+	"src/options/options.css",
+	"src/options/options.html",
+	"src/options/view.js",
 ];
 
 function packExtension({
@@ -43,6 +60,7 @@ function packExtension({
 			`${JSON.stringify(manifest, null, 2)}\n`,
 		);
 		for (const file of PRODUCTION_FILES) {
+			fs.mkdirSync(path.dirname(path.join(distDir, file)), { recursive: true });
 			fs.copyFileSync(path.join(rootDir, file), path.join(distDir, file));
 		}
 		fs.cpSync(path.join(rootDir, "icons"), path.join(distDir, "icons"), {

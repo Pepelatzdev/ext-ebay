@@ -2,10 +2,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const configCode = readFileSync(resolve("config.js"), "utf8");
-const validationCode = readFileSync(resolve("message-validation.js"), "utf8");
+const configCode = readFileSync(resolve("src/domain/policy.js"), "utf8");
+const validationCode = readFileSync(
+	resolve("src/domain/message-validation.js"),
+	"utf8",
+);
 const validation = new Function(
-	`${configCode}\n${validationCode}; return ECAMessageValidation;`,
+	`${configCode}\n${validationCode}; return ECAMessageValidation.create(ECA);`,
 )();
 
 describe("message validation", () => {

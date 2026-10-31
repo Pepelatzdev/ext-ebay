@@ -2,9 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const code = readFileSync(resolve("config.js"), "utf8");
-const pickerCode = readFileSync(resolve("photo-picker.js"), "utf8");
-const picker = new Function(`${code}\n${pickerCode}; return ECAPhotoPicker;`)();
+const code = readFileSync(resolve("src/domain/policy.js"), "utf8");
+const ebayConfig = readFileSync(resolve("src/ebay/config.js"), "utf8");
+const pickerCode = readFileSync(resolve("src/ebay/photo-picker.js"), "utf8");
+const picker = new Function(
+	`${code}\n${ebayConfig}\n${pickerCode}; return ECAPhotoPicker.create({ document, policy: ECA, config: ECAEbayConfig });`,
+)();
 
 describe("photo picker", () => {
 	it("selects the first ten photos and reports the limit", async () => {

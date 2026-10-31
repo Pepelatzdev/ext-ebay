@@ -1,7 +1,7 @@
 {
 	"name": "ext-ebay",
 	"version": "1.1.2",
-	"main": "background.js",
+	"main": "src/entrypoints/background.js",
 	"directories": {
 		"doc": "docs"
 	},

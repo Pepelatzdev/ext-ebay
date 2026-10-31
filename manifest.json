@@ -11,9 +11,9 @@
 		"https://gemini.google.com/*"
 	],
 	"background": {
-		"service_worker": "background.js"
+		"service_worker": "src/entrypoints/background.js"
 	},
-	"options_page": "options.html",
+	"options_page": "src/options/options.html",
 	"content_scripts": [
 		{
 			"matches": [
@@ -29,24 +29,33 @@
 				"https://*.ebay.pl/itm/*"
 			],
 			"js": [
-				"config.js",
-				"gallery-extractor.js",
-				"extractors.js",
-				"photo-picker.js",
-				"ui.js",
-				"content.js"
+				"src/domain/policy.js",
+				"src/domain/prompt.js",
+				"src/ebay/config.js",
+				"src/infrastructure/chrome-client.js",
+				"src/ebay/gallery.js",
+				"src/ebay/reader.js",
+				"src/ebay/photo-picker.js",
+				"src/ebay/view.js",
+				"src/application/start-ebay.js",
+				"src/entrypoints/ebay.js"
 			],
-			"css": ["content.css"],
+			"css": ["src/ebay/content.css"],
 			"run_at": "document_idle"
 		},
 		{
 			"matches": ["https://gemini.google.com/*"],
 			"js": [
-				"config.js",
-				"photo-transfer.js",
-				"gemini-editor.js",
-				"gemini-attachments.js",
-				"gemini-content.js"
+				"src/domain/policy.js",
+				"src/domain/photo-codec.js",
+				"src/infrastructure/chrome-client.js",
+				"src/gemini/editor.js",
+				"src/gemini/attachments.js",
+				"src/gemini/status.js",
+				"src/gemini/chat-observer.js",
+				"src/gemini/files.js",
+				"src/application/gemini.js",
+				"src/entrypoints/gemini.js"
 			],
 			"run_at": "document_idle"
 		}

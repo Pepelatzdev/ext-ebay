@@ -1,37 +1,25 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ebayModules } from "./helpers/scripts.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const configCode = readFileSync(resolve(__dirname, "../config.js"), "utf8");
-const extractorsCode = readFileSync(
-	resolve(__dirname, "../extractors.js"),
-	"utf8",
-);
-
-/**
- * Evaluate config.js + extractors.js in the global scope before each test.
- * Both files use `var` / `function` declarations that hoist to globalThis.
- */
 beforeEach(() => {
 	document.body.innerHTML = "";
-
-	// Provide a stub for chrome.runtime.sendMessage (used by extractDescription)
 	globalThis.chrome = { runtime: { sendMessage: vi.fn() } };
-
-	// biome-ignore lint/security/noGlobalEval: intentional – loads non-module scripts into the test global
-	// biome-ignore lint/complexity/noCommaOperator: indirect eval
-	(0, eval)(configCode);
-	// biome-ignore lint/security/noGlobalEval: intentional
-	// biome-ignore lint/complexity/noCommaOperator: indirect eval
-	(0, eval)(extractorsCode);
+	const modules = new Function(`${ebayModules()}
+ const reader = ECAEbayReader.create({ document, location: { get href() { return window.location.href; } }, config: { ...ECA, ...ECAEbayConfig }, loadDescription: url => chrome.runtime.sendMessage({ type: ECA.MESSAGE.FETCH_DESCRIPTION, url }) });
+ const prompt = ECAPrompt.create(ECA);
+ return { ECA, ...reader, ...prompt, formatPrompt: (preamble, data) => prompt.formatPrompt(preamble, data, window.location.href) };
+ `)();
+	Object.assign(globalThis, modules);
 });
 
 // ── extractItemId ────────────────────────────────────────────
 
 describe("extractItemId", () => {
 	function setUrl(url) {
+		if (Object.getPrototypeOf(window.location) === Object.prototype) {
+			window.location.href = url;
+			return;
+		}
 		Object.defineProperty(window, "location", {
 			value: { href: url },
 			writable: true,
@@ -219,6 +207,10 @@ describe("extractAuctionData", () => {
 
 describe("formatPrompt", () => {
 	function setUrl(url) {
+		if (Object.getPrototypeOf(window.location) === Object.prototype) {
+			window.location.href = url;
+			return;
+		}
 		Object.defineProperty(window, "location", {
 			value: { href: url },
 			writable: true,

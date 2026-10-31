@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const code = readFileSync(resolve("config.js"), "utf8");
-const extractorCode = readFileSync(resolve("gallery-extractor.js"), "utf8");
+const code = readFileSync(resolve("src/domain/policy.js"), "utf8");
+const extractorCode = readFileSync(resolve("src/ebay/gallery.js"), "utf8");
 const extractor = new Function(
-	`${code}\n${extractorCode}; return ECAGalleryExtractor;`,
+	`${code}\n${extractorCode}; return ECAGalleryExtractor.create({ policy: ECA, location: window.location });`,
 )();
 
 function gallery(markup) {
